@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# IDEA
+.idea/
+*.iml
+
+# Cargo
+target/
+
+# Wasm
+*.wasm
