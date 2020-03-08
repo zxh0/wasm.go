@@ -1,0 +1,12 @@
+language: go
+
+go:
+  - 1.13.x
+  # - tip
+
+install:
+  git clone --depth=10 --branch=master https://github.com/WebAssembly/spec
+
+script:
+  - sudo chmod +x ./run_testsuite.sh
+  - ./run_testsuite.sh
