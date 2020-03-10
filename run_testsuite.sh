@@ -2,7 +2,9 @@
 set -ex
 
 # alias wasmgo="go run github.com/zxh0/wasm.go/cmd/wasmgo"
-go build github.com/zxh0/wasm.go/cmd/wasmgo
+if [[ ! -f wasmgo ]]; then
+  go build github.com/zxh0/wasm.go/cmd/wasmgo
+fi
 
 ./wasmgo -T ./spec/test/core/address.wast > /dev/null
 ./wasmgo -T ./spec/test/core/align.wast > /dev/null

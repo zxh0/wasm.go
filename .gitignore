@@ -10,3 +10,9 @@ target/
 
 # Wasm
 *.wasm
+
+# spec
+spec/
+
+# binary
+wasmgo
