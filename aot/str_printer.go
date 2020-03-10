@@ -9,6 +9,10 @@ type printer struct {
 	sb *strings.Builder
 }
 
+func newPrinter() printer {
+	return printer{sb: &strings.Builder{}}
+}
+
 func (p *printer) print(s string) {
 	p.sb.WriteString(s)
 }

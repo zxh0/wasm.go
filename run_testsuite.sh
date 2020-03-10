@@ -1,78 +1,78 @@
 #!/usr/bin/env bash
 set -ex
 
-# alias wastgo="go run github.com/zxh0/wasm.go/cmd/wastgo"
-go build github.com/zxh0/wasm.go/cmd/wastgo
+# alias wasmgo="go run github.com/zxh0/wasm.go/cmd/wasmgo"
+go build github.com/zxh0/wasm.go/cmd/wasmgo
 
-./wastgo ./spec/test/core/address.wast > /dev/null
-./wastgo ./spec/test/core/align.wast > /dev/null
-./wastgo ./spec/test/core/binary-leb128.wast > /dev/null
-./wastgo ./spec/test/core/block.wast > /dev/null
-./wastgo ./spec/test/core/br.wast > /dev/null
-./wastgo ./spec/test/core/br_if.wast > /dev/null
-./wastgo ./spec/test/core/br_table.wast > /dev/null
-./wastgo ./spec/test/core/break-drop.wast > /dev/null
-./wastgo ./spec/test/core/call.wast > /dev/null
-./wastgo ./spec/test/core/call_indirect.wast > /dev/null
-./wastgo ./spec/test/core/comments.wast > /dev/null
-./wastgo ./spec/test/core/const.wast > /dev/null
-./wastgo ./spec/test/core/conversions.wast > /dev/null
-./wastgo ./spec/test/core/custom.wast > /dev/null
-./wastgo ./spec/test/core/data.wast > /dev/null
-./wastgo ./spec/test/core/elem.wast > /dev/null
-./wastgo ./spec/test/core/endianness.wast > /dev/null
-./wastgo ./spec/test/core/exports.wast > /dev/null
-./wastgo ./spec/test/core/f32.wast > /dev/null
-./wastgo ./spec/test/core/f32_bitwise.wast > /dev/null
-./wastgo ./spec/test/core/f32_cmp.wast > /dev/null
-./wastgo ./spec/test/core/f64.wast > /dev/null
-./wastgo ./spec/test/core/f64_bitwise.wast > /dev/null
-./wastgo ./spec/test/core/f64_cmp.wast > /dev/null
-./wastgo ./spec/test/core/fac.wast > /dev/null
-./wastgo ./spec/test/core/float_exprs.wast > /dev/null
-#./wastgo ./spec/test/core/float_literals.wast > /dev/null
-./wastgo ./spec/test/core/float_memory.wast > /dev/null
-./wastgo ./spec/test/core/float_misc.wast > /dev/null
-./wastgo ./spec/test/core/forward.wast > /dev/null
-./wastgo ./spec/test/core/func.wast > /dev/null
-./wastgo ./spec/test/core/func_ptrs.wast > /dev/null
-./wastgo ./spec/test/core/global.wast > /dev/null
-./wastgo ./spec/test/core/i32.wast > /dev/null
-./wastgo ./spec/test/core/i64.wast > /dev/null
-./wastgo ./spec/test/core/if.wast > /dev/null
-./wastgo ./spec/test/core/imports.wast > /dev/null
-./wastgo ./spec/test/core/int_exprs.wast > /dev/null
-./wastgo ./spec/test/core/int_literals.wast > /dev/null
-./wastgo ./spec/test/core/labels.wast > /dev/null
-./wastgo ./spec/test/core/left-to-right.wast > /dev/null
-./wastgo ./spec/test/core/linking.wast > /dev/null
-./wastgo ./spec/test/core/load.wast > /dev/null
-./wastgo ./spec/test/core/local_get.wast > /dev/null
-./wastgo ./spec/test/core/local_set.wast > /dev/null
-./wastgo ./spec/test/core/local_tee.wast > /dev/null
-./wastgo ./spec/test/core/loop.wast > /dev/null
-./wastgo ./spec/test/core/memory.wast > /dev/null
-./wastgo ./spec/test/core/memory_grow.wast > /dev/null
-./wastgo ./spec/test/core/memory_redundancy.wast > /dev/null
-./wastgo ./spec/test/core/memory_size.wast > /dev/null
-./wastgo ./spec/test/core/memory_trap.wast > /dev/null
-./wastgo ./spec/test/core/names.wast > /dev/null
-./wastgo ./spec/test/core/nop.wast > /dev/null
-./wastgo ./spec/test/core/return.wast > /dev/null
-./wastgo ./spec/test/core/select.wast > /dev/null
-./wastgo ./spec/test/core/skip-stack-guard-page.wast > /dev/null
-./wastgo ./spec/test/core/stack.wast > /dev/null
-./wastgo ./spec/test/core/start.wast > /dev/null
-./wastgo ./spec/test/core/store.wast > /dev/null
-./wastgo ./spec/test/core/switch.wast > /dev/null
-./wastgo ./spec/test/core/table.wast > /dev/null
-./wastgo ./spec/test/core/token.wast > /dev/null
-./wastgo ./spec/test/core/traps.wast > /dev/null
-./wastgo ./spec/test/core/type.wast > /dev/null
-./wastgo ./spec/test/core/unreachable.wast > /dev/null
-./wastgo ./spec/test/core/unreached-invalid.wast > /dev/null
-./wastgo ./spec/test/core/unwind.wast > /dev/null
-./wastgo ./spec/test/core/utf8-custom-section-id.wast > /dev/null
-./wastgo ./spec/test/core/utf8-import-field.wast > /dev/null
-./wastgo ./spec/test/core/utf8-import-module.wast > /dev/null
-./wastgo ./spec/test/core/utf8-invalid-encoding.wast > /dev/null
+./wasmgo -T ./spec/test/core/address.wast > /dev/null
+./wasmgo -T ./spec/test/core/align.wast > /dev/null
+./wasmgo -T ./spec/test/core/binary-leb128.wast > /dev/null
+./wasmgo -T ./spec/test/core/block.wast > /dev/null
+./wasmgo -T ./spec/test/core/br.wast > /dev/null
+./wasmgo -T ./spec/test/core/br_if.wast > /dev/null
+./wasmgo -T ./spec/test/core/br_table.wast > /dev/null
+./wasmgo -T ./spec/test/core/break-drop.wast > /dev/null
+./wasmgo -T ./spec/test/core/call.wast > /dev/null
+./wasmgo -T ./spec/test/core/call_indirect.wast > /dev/null
+./wasmgo -T ./spec/test/core/comments.wast > /dev/null
+./wasmgo -T ./spec/test/core/const.wast > /dev/null
+./wasmgo -T ./spec/test/core/conversions.wast > /dev/null
+./wasmgo -T ./spec/test/core/custom.wast > /dev/null
+./wasmgo -T ./spec/test/core/data.wast > /dev/null
+./wasmgo -T ./spec/test/core/elem.wast > /dev/null
+./wasmgo -T ./spec/test/core/endianness.wast > /dev/null
+./wasmgo -T ./spec/test/core/exports.wast > /dev/null
+./wasmgo -T ./spec/test/core/f32.wast > /dev/null
+./wasmgo -T ./spec/test/core/f32_bitwise.wast > /dev/null
+./wasmgo -T ./spec/test/core/f32_cmp.wast > /dev/null
+./wasmgo -T ./spec/test/core/f64.wast > /dev/null
+./wasmgo -T ./spec/test/core/f64_bitwise.wast > /dev/null
+./wasmgo -T ./spec/test/core/f64_cmp.wast > /dev/null
+./wasmgo -T ./spec/test/core/fac.wast > /dev/null
+./wasmgo -T ./spec/test/core/float_exprs.wast > /dev/null
+#./wasmgo -T ./spec/test/core/float_literals.wast > /dev/null
+./wasmgo -T ./spec/test/core/float_memory.wast > /dev/null
+./wasmgo -T ./spec/test/core/float_misc.wast > /dev/null
+./wasmgo -T ./spec/test/core/forward.wast > /dev/null
+./wasmgo -T ./spec/test/core/func.wast > /dev/null
+./wasmgo -T ./spec/test/core/func_ptrs.wast > /dev/null
+./wasmgo -T ./spec/test/core/global.wast > /dev/null
+./wasmgo -T ./spec/test/core/i32.wast > /dev/null
+./wasmgo -T ./spec/test/core/i64.wast > /dev/null
+./wasmgo -T ./spec/test/core/if.wast > /dev/null
+./wasmgo -T ./spec/test/core/imports.wast > /dev/null
+./wasmgo -T ./spec/test/core/int_exprs.wast > /dev/null
+./wasmgo -T ./spec/test/core/int_literals.wast > /dev/null
+./wasmgo -T ./spec/test/core/labels.wast > /dev/null
+./wasmgo -T ./spec/test/core/left-to-right.wast > /dev/null
+./wasmgo -T ./spec/test/core/linking.wast > /dev/null
+./wasmgo -T ./spec/test/core/load.wast > /dev/null
+./wasmgo -T ./spec/test/core/local_get.wast > /dev/null
+./wasmgo -T ./spec/test/core/local_set.wast > /dev/null
+./wasmgo -T ./spec/test/core/local_tee.wast > /dev/null
+./wasmgo -T ./spec/test/core/loop.wast > /dev/null
+./wasmgo -T ./spec/test/core/memory.wast > /dev/null
+./wasmgo -T ./spec/test/core/memory_grow.wast > /dev/null
+./wasmgo -T ./spec/test/core/memory_redundancy.wast > /dev/null
+./wasmgo -T ./spec/test/core/memory_size.wast > /dev/null
+./wasmgo -T ./spec/test/core/memory_trap.wast > /dev/null
+./wasmgo -T ./spec/test/core/names.wast > /dev/null
+./wasmgo -T ./spec/test/core/nop.wast > /dev/null
+./wasmgo -T ./spec/test/core/return.wast > /dev/null
+./wasmgo -T ./spec/test/core/select.wast > /dev/null
+./wasmgo -T ./spec/test/core/skip-stack-guard-page.wast > /dev/null
+./wasmgo -T ./spec/test/core/stack.wast > /dev/null
+./wasmgo -T ./spec/test/core/start.wast > /dev/null
+./wasmgo -T ./spec/test/core/store.wast > /dev/null
+./wasmgo -T ./spec/test/core/switch.wast > /dev/null
+./wasmgo -T ./spec/test/core/table.wast > /dev/null
+./wasmgo -T ./spec/test/core/token.wast > /dev/null
+./wasmgo -T ./spec/test/core/traps.wast > /dev/null
+./wasmgo -T ./spec/test/core/type.wast > /dev/null
+./wasmgo -T ./spec/test/core/unreachable.wast > /dev/null
+./wasmgo -T ./spec/test/core/unreached-invalid.wast > /dev/null
+./wasmgo -T ./spec/test/core/unwind.wast > /dev/null
+./wasmgo -T ./spec/test/core/utf8-custom-section-id.wast > /dev/null
+./wasmgo -T ./spec/test/core/utf8-import-field.wast > /dev/null
+./wasmgo -T ./spec/test/core/utf8-import-module.wast > /dev/null
+./wasmgo -T ./spec/test/core/utf8-invalid-encoding.wast > /dev/null

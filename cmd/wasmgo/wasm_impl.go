@@ -19,7 +19,8 @@ type WasmInterpreter struct {
 }
 
 func (WasmInterpreter) Validate(m binary.Module) error {
-	return validator.Validate(m)
+	err, _ := validator.Validate(m)
+	return err
 }
 
 func (WasmInterpreter) Instantiate(

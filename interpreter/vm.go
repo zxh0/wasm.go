@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	Check = true
-
 	DebugNone  = 0
 	DebugCall  = 1
 	DebugInstr = 2
@@ -36,10 +34,8 @@ type vm struct {
 }
 
 func NewInstance(m binary.Module, instances instance.Map) (instance.Instance, error) {
-	if Check {
-		if err := validator.Validate(m); err != nil {
-			return nil, err
-		}
+	if err, _ := validator.Validate(m); err != nil {
+		return nil, err
 	}
 
 	vm := &vm{module: m, debug: DebugNone}

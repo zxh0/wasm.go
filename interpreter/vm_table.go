@@ -12,7 +12,11 @@ type table struct {
 	elems []instance.Function
 }
 
-func NewTable(tt binary.TableType) instance.Table {
+func NewTable(min, max uint32) instance.Table {
+	tt := binary.TableType{
+		ElemType: binary.FuncRef,
+		Limits:   binary.Limits{Min: min, Max: max},
+	}
 	return newTable(tt)
 }
 

@@ -46,11 +46,12 @@ type codeValidator struct {
 	ctrls      ctrlStack
 	mv         *moduleValidator
 	localCount int
+	maxOpds    int
 	instrPath  map[int]string // depth -> opname
 }
 
 func validateCode(mv *moduleValidator,
-	code binary.Code, ft binary.FuncType) (err error) {
+	code binary.Code, ft binary.FuncType) (err error, maxOpds int) {
 
 	cv := &codeValidator{
 		mv:        mv,
@@ -69,6 +70,7 @@ func validateCode(mv *moduleValidator,
 	}()
 
 	cv.validateCode(code, ft)
+	maxOpds = cv.maxOpds
 	return
 }
 
@@ -98,6 +100,9 @@ func push_opd(type : val_type | Unknown) =
 */
 func (cv *codeValidator) pushOpd(vt valType) {
 	cv.opds = append(cv.opds, vt)
+	if n := len(cv.opds); n > cv.maxOpds {
+		cv.maxOpds = n
+	}
 }
 
 /*
@@ -113,9 +118,6 @@ func (cv *codeValidator) popOpd() valType {
 		}
 		cv.error("type mismatch") // TODO
 	}
-	return cv.popOpd0()
-}
-func (cv *codeValidator) popOpd0() valType {
 	r := cv.opds[len(cv.opds)-1]
 	cv.opds = cv.opds[:len(cv.opds)-1]
 	return r

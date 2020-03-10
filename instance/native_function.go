@@ -1,15 +1,14 @@
-package main
+package instance
 
 import (
 	"github.com/zxh0/wasm.go/binary"
-	"github.com/zxh0/wasm.go/instance"
 )
 
-var _ instance.Function = (*nativeFunction)(nil)
+var _ Function = (*nativeFunction)(nil)
 
 type nativeFunction struct {
 	t binary.FuncType
-	f instance.GoFunc
+	f GoFunc
 }
 
 func (nf nativeFunction) Type() binary.FuncType {

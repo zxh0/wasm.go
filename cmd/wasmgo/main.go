@@ -1,16 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/zxh0/wasm.go/aot"
 	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
 	"github.com/zxh0/wasm.go/interpreter"
+	"github.com/zxh0/wasm.go/text"
+	"github.com/zxh0/wasm.go/validator"
 )
 
 const appHelpTemplate = `NAME:
@@ -25,25 +29,32 @@ OPTIONS:
 `
 
 const (
-	flagNameAOT   = "aot"
-	flagNameCheck = "check"
-	flagNameDump  = "dump"
-	flagNameExec  = "exec"
+	flagNameAOT     = "aot"
+	flagNameCheck   = "check"
+	flagNameDump    = "dump"
+	flagNameExec    = "exec"
+	flagNameCompile = "compile"
+	flagNameTest    = "test"
 )
 
-// wasmgo    file.wasm # exec
-// wasmgo -d file.wasm # dump
-// wasmgo -c file.wasm # check
+// wasmgo             file.wasm # exec
+// wasmgo -A|-aot     file.wasm
+// wasmgo -C|-check   file.wasm
+// wasmgo -D|-dump    file.wasm
+// wasmgo -K|-compile file.wat
+// wasmgo -T|-test    file.wast
 func main() {
 	app := &cli.App{
 		Version:   "0.1.0",
 		Usage:     "Wasm.go CLI",
 		ArgsUsage: "[file]",
 		Flags: []cli.Flag{
-			boolFlag(flagNameAOT, "aot compile wasm file", false),
-			boolFlag(flagNameCheck, "check wasm file", false),
-			boolFlag(flagNameDump, "dump wasm file", false),
-			boolFlag(flagNameExec, "execute wasm file", true),
+			boolFlag(flagNameAOT, "A", "aot compile .wasm file", false),
+			boolFlag(flagNameCheck, "C", "check .wasm file", false),
+			boolFlag(flagNameDump, "D", "dump .wasm file", false),
+			boolFlag(flagNameExec, "E", "execute .wasm file", true),
+			boolFlag(flagNameCompile, "K", "compile .wat file", false),
+			boolFlag(flagNameTest, "T", "test .wast file", false),
 		},
 		CustomAppHelpTemplate: appHelpTemplate,
 		Action: func(ctx *cli.Context) error {
@@ -54,8 +65,16 @@ func main() {
 				return checkWasm(filename)
 			} else if ctx.Bool(flagNameDump) {
 				return dumpWasm(filename)
-			} else {
+			} else if ctx.Bool(flagNameCompile) {
+				return compileWat(filename)
+			} else if ctx.Bool(flagNameTest) {
+				return testWast(filename)
+			} else if strings.HasSuffix(filename, ".wasm") {
 				return execWasm(filename)
+			} else if strings.HasSuffix(filename, ".so") {
+				return execAOT(filename)
+			} else {
+				return nil
 			}
 		},
 	}
@@ -65,16 +84,17 @@ func main() {
 	}
 }
 
-func boolFlag(name, usage string, value bool) cli.Flag {
+func boolFlag(name, alias, usage string, value bool) cli.Flag {
 	return &cli.BoolFlag{
 		Name:    name,
-		Aliases: []string{usage[0:1]},
+		Aliases: []string{alias},
 		Usage:   usage,
 		Value:   value,
 	}
 }
 
 func aotWasm(filename string) error {
+	//fmt.Println("AOT " + filename)
 	module, err := binary.DecodeFile(filename)
 	if err != nil {
 		return err
@@ -86,7 +106,13 @@ func aotWasm(filename string) error {
 
 func checkWasm(filename string) error {
 	fmt.Println("check " + filename)
-	return nil
+	module, err := binary.DecodeFile(filename)
+	if err != nil {
+		return err
+	}
+
+	err, _ = validator.Validate(module)
+	return err
 }
 
 func dumpWasm(filename string) error {
@@ -102,7 +128,7 @@ func dumpWasm(filename string) error {
 }
 
 func execWasm(filename string) error {
-	//fmt.Println("exec " + filename)
+	fmt.Println("exec " + filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -113,8 +139,7 @@ func execWasm(filename string) error {
 		return err
 	}
 
-	ni := &NativeInstance{}
-	mm := map[string]instance.Instance{"env": ni}
+	mm := map[string]instance.Instance{"env": newTestEnv()}
 	vm, err := interpreter.NewInstance(module, mm)
 	if err != nil {
 		return err
@@ -122,5 +147,43 @@ func execWasm(filename string) error {
 
 	//ni.mem, _ = vm.GetMemory("")
 	_, err = vm.CallFunc("main")
+	return err
+}
+
+func compileWat(filename string) error {
+	fmt.Println("compile " + filename)
+	m, err := text.CompileModuleFile(filename)
+	if err != nil {
+		return err
+	}
+
+	// TODO
+	bytes, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(bytes))
+	return nil
+}
+
+func testWast(filename string) error {
+	fmt.Println("test " + filename)
+	s, err := text.CompileScriptFile(filename)
+	if err != nil {
+		return err
+	}
+	return newWastTester(s).test()
+}
+
+func execAOT(filename string) error {
+	fmt.Println("exec " + filename)
+	iMap := map[string]instance.Instance{"env": newTestEnv()}
+	i, err := aot.Load(filename, iMap)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.CallFunc("main")
 	return err
 }

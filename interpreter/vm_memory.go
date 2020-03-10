@@ -12,7 +12,8 @@ type memory struct {
 	data  []byte
 }
 
-func NewMemory(mt binary.MemType) instance.Memory {
+func NewMemory(min, max uint32) instance.Memory {
+	mt := binary.MemType{Min: min, Max: max}
 	return newMemory(mt)
 }
 

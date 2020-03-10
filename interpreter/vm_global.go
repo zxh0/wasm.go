@@ -12,7 +12,11 @@ type globalVar struct {
 	val   uint64
 }
 
-func NewGlobal(gt binary.GlobalType, val uint64) instance.Global {
+func NewGlobal(vt binary.ValType, mut bool, val uint64) instance.Global {
+	gt := binary.GlobalType{ValType: vt}
+	if mut {
+		gt.Mut = 1
+	}
 	return newGlobal(gt, val)
 }
 

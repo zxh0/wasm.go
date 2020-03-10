@@ -11,46 +11,47 @@ type moduleValidator struct {
 	importedFuncs    []binary.Import
 	importedTables   []binary.Import
 	importedMemories []binary.Import
-	importedGlobals  []binary.Import // TODO
+	importedGlobals  []binary.Import
 	globalTypes      []binary.GlobalType
+	maxOperandStacks []int
 }
 
-func Validate(module binary.Module) error {
+func Validate(module binary.Module) (err error, maxOperandStacks []int) {
 	v := &moduleValidator{module: module}
-	if err := v.validateTypeSec(); err != nil {
-		return err
+	if err = v.validateTypeSec(); err != nil {
+		return
 	}
-	if err := v.validateImportSec(); err != nil {
-		return err
+	if err = v.validateImportSec(); err != nil {
+		return
 	}
-	if err := v.validateFuncSec(); err != nil {
-		return err
+	if err = v.validateFuncSec(); err != nil {
+		return
 	}
-	if err := v.validateTableSec(); err != nil {
-		return err
+	if err = v.validateTableSec(); err != nil {
+		return
 	}
-	if err := v.validateMemSec(); err != nil {
-		return err
+	if err = v.validateMemSec(); err != nil {
+		return
 	}
-	if err := v.validateGlobalSec(); err != nil {
-		return err
+	if err = v.validateGlobalSec(); err != nil {
+		return
 	}
-	if err := v.validateExportSec(); err != nil {
-		return err
+	if err = v.validateExportSec(); err != nil {
+		return
 	}
-	if err := v.validateStartSec(); err != nil {
-		return err
+	if err = v.validateStartSec(); err != nil {
+		return
 	}
-	if err := v.validateElemSec(); err != nil {
-		return err
+	if err = v.validateElemSec(); err != nil {
+		return
 	}
-	if err := v.validateCodeSec(); err != nil {
-		return err
+	if err = v.validateCodeSec(); err != nil {
+		return
 	}
-	if err := v.validateDataSec(); err != nil {
-		return err
+	if err = v.validateDataSec(); err != nil {
+		return
 	}
-	return nil
+	return nil, v.maxOperandStacks
 }
 
 func (v *moduleValidator) validateTypeSec() error {
@@ -204,7 +205,9 @@ func (v *moduleValidator) validateCodeSec() error {
 	for i, code := range v.module.CodeSec {
 		ftIdx := v.module.FuncSec[i]
 		ft := v.module.TypeSec[ftIdx]
-		if err := validateCode(v, code, ft); err != nil {
+		err, maxOpds := validateCode(v, code, ft)
+		v.maxOperandStacks = append(v.maxOperandStacks, maxOpds)
+		if err != nil {
 			return fmt.Errorf("code#%d, %s", i, err.Error())
 		}
 	}
