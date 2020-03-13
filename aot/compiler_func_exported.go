@@ -19,16 +19,11 @@ func (c *exportedFuncCompiler) compile(expIdx, fIdx int, ft binary.FuncType) str
 	if fIdx < c.importedFuncCount {
 		c.printf("	return m.f%d(args...)\n", fIdx)
 	} else {
-		if len(ft.ResultTypes) > 0 {
-			c.print("	r := ")
-		} else {
-			c.print("	")
-		}
+		c.print("	")
+		c.printIf(len(ft.ResultTypes) > 0, "r := ", "")
 		c.printf("m.f%d(", fIdx)
 		for i, vt := range ft.ParamTypes {
-			if i > 0 {
-				c.print(", ")
-			}
+			c.printIf(i > 0, ", ", "")
 			switch vt {
 			case binary.ValTypeI32:
 				c.print("uint64(args[%d].(int32))")

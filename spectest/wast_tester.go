@@ -1,4 +1,4 @@
-package main
+package spectest
 
 import (
 	"fmt"
@@ -15,6 +15,10 @@ type wastTester struct {
 	wasmImpl  WasmImpl
 	instances map[string]instance.Instance
 	instance  instance.Instance
+}
+
+func TestWast(script *text.Script) error {
+	return newWastTester(script).test()
 }
 
 func newWastTester(script *text.Script) *wastTester {

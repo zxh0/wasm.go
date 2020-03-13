@@ -10,6 +10,8 @@ target/
 
 # Wasm
 *.wasm
+*.wasm.go
+*.so
 
 # spec
 spec/

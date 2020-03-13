@@ -1,4 +1,4 @@
-package main
+package spectest
 
 import (
 	"github.com/zxh0/wasm.go/binary"

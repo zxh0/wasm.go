@@ -22,40 +22,35 @@ func (c *externalFuncCompiler) compile(idx int, ft binary.FuncType) string {
 }
 
 func (c *externalFuncCompiler) genFuncBody(idx int, ft binary.FuncType) {
-	if len(ft.ResultTypes) > 0 {
-		c.print("	r, err := ")
-	} else {
-		c.print("	_, err := ")
-	}
+	c.printIf(len(ft.ResultTypes) > 0,
+		"	r, err := ",
+		"	_, err := ")
 	c.printf("m.importedFuncs[%d].Call(", idx)
 	for i, vt := range ft.ParamTypes {
-		if i > 0 {
-			c.print(", ")
-		}
+		c.printIf(i > 0, ", ", "")
 		switch vt {
 		case binary.ValTypeI32:
-			c.printf("int32(p%d)", i)
+			c.printf("int32(l%d)", i)
 		case binary.ValTypeI64:
-			c.printf("int64(p%d)", i)
+			c.printf("int64(l%d)", i)
 		case binary.ValTypeF32:
-			c.printf("f32(p%d)", i)
+			c.printf("f32(l%d)", i)
 		case binary.ValTypeF64:
-			c.printf("f64(p%d)", i)
+			c.printf("f64(l%d)", i)
 		}
 	}
 	c.println(")")
 	c.println("	if err != nil {} // TODO")
 	if len(ft.ResultTypes) > 0 {
-		c.print("return ")
 		switch ft.ResultTypes[0] {
 		case binary.ValTypeI32:
-			c.println("uint32(r.(int32))")
+			c.println("return uint32(r.(int32))")
 		case binary.ValTypeI64:
-			c.println("uint64(r.(int64))")
+			c.println("return uint64(r.(int64))")
 		case binary.ValTypeF32:
-			c.println("u32(r.(float32))")
+			c.println("return u32(r.(float32))")
 		case binary.ValTypeF64:
-			c.println("u64(r.(float64))")
+			c.println("return u64(r.(float64))")
 		}
 	}
 }

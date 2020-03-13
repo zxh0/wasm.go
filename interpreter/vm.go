@@ -312,7 +312,7 @@ func (vm *vm) logInstr(instr binary.Instruction) {
 		fmt.Print(strings.Repeat(">", vm.blockDepth()))
 		if instr.Opcode != binary.Call {
 			if vm.debug >= DebugInstr {
-				fmt.Printf("%s %v\n", instr.String(), instr.Args)
+				fmt.Printf("%s %v\n", instr.GetOpname(), instr.Args)
 			}
 		} else {
 			f := vm.funcs[instr.Args.(uint32)]

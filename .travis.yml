@@ -8,5 +8,6 @@ install:
   git clone --depth=10 --branch=master https://github.com/WebAssembly/spec
 
 script:
+  - go test ./...
   - sudo chmod +x ./run_testsuite.sh
   - ./run_testsuite.sh

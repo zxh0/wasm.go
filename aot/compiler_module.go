@@ -1,6 +1,10 @@
 package aot
 
-import "github.com/zxh0/wasm.go/binary"
+import (
+	"math"
+
+	"github.com/zxh0/wasm.go/binary"
+)
 
 type moduleCompiler struct {
 	printer
@@ -9,15 +13,15 @@ type moduleCompiler struct {
 
 func (c *moduleCompiler) compile() {
 	c.genModule()
-	c.genNew()
 	c.genDummy()
+	c.genNew()
+	c.println("")
+	c.genMemInit()
 	c.println("")
 	c.genExternalFuncs()
 	c.genInternalFuncs()
 	c.genExportedFuncs()
-	c.genGet()
-	c.genGetGlobalVal()
-	c.genCallFunc()
+	c.genInstanceImpl()
 	c.genUtils()
 }
 
@@ -27,18 +31,33 @@ func (c *moduleCompiler) genModule() {
 package main
 
 import (
+	gobin "encoding/binary"
 	"math"
+	"math/bits"
 
 	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
 	"github.com/zxh0/wasm.go/interpreter"
 )
 
+var LE = gobin.LittleEndian
+
 type aotModule struct {
 	importedFuncs []instance.Function
 	table         instance.Table
 	memory        instance.Memory
 	globals       []instance.Global
+}
+`)
+}
+
+func (c *moduleCompiler) genDummy() {
+	c.print(`
+// TODO
+func dummy() {
+	_ = bits.Add
+	_ = binary.Decode
+	_ = interpreter.NewInstance
 }
 `)
 }
@@ -63,40 +82,56 @@ func Instantiate(iMap instance.Map) (instance.Instance, error) {
 		c.printf(`	m.table = iMap["%s"].Get("%s").(instance.Table)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.TableSec) > 0 {
-		tt := c.module.TableSec[0]
-		c.printf("	mt := binary.TableType{ElemType:0x70, Limits{Min: %d, Max: %d}}\n",
-			tt.Limits.Min, tt.Limits.Max)
-		c.println("	m.table = interpreter.NewTable(mt)")
+		c.printf("	m.table = interpreter.NewTable(%d, %d)\n",
+			c.module.TableSec[0].Limits.Min, c.module.TableSec[0].Limits.Max)
 	}
 	if len(c.importedMemories) > 0 {
 		c.printf(`	m.memory = iMap["%s"].Get("%s").(instance.Memory)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.MemSec) > 0 {
-		mt := c.module.MemSec[0]
-		c.printf("	mt := binary.Limits{Min: %d, Max: %d}\n", mt.Min, mt.Max)
-		c.println("	m.memory = interpreter.NewMemory(mt)")
+		c.printf("	m.memory = interpreter.NewMemory(%d, %d)\n",
+			c.module.MemSec[0].Min, c.module.MemSec[0].Max)
 	}
 	for i, imp := range c.importedGlobals {
 		c.printf(`	m.globals[%d] = iMap["%s"].Get("%s").(instance.Global)%s`,
 			i, imp.Module, imp.Name, "\n")
 	}
 	for i, g := range c.module.GlobalSec {
-		c.printf("	gt := binary.GlobalType{ValType: %d, Mut:%d}\n",
-			g.Type.ValType, g.Type.Mut)
-		c.printf("	m.globals[%d] = interpreter.NewGlobal()\n",
-			len(c.importedGlobals)+i)
+		c.printf("	m.globals[%d] = interpreter.NewGlobal(%d, %t, %d)\n",
+			len(c.importedGlobals)+i, g.Type.ValType, g.Type.Mut == 1, getConstVal(g.Expr))
 	}
 
+	c.println("	m.initMem()")
 	c.println("	return m, nil // TODO\n}")
 }
 
-func (c *moduleCompiler) genDummy() {
-	c.print(`
-func dummy() {
-	_ = binary.Decode
-	_ = interpreter.NewInstance
+func (c *moduleCompiler) genMemInit() {
+	c.println("func (m *aotModule) initMem() {")
+	for _, data := range c.module.DataSec {
+		if len(data.Init) > 0 {
+			offset := getConstVal(data.Offset)
+			c.printf("	m.memory.Write(%d, []byte(%q))\n",
+				offset, data.Init)
+		}
+	}
+	c.println("}")
 }
-`)
+
+func getConstVal(constExpr []binary.Instruction) interface{} {
+	if len(constExpr) == 0 {
+		return 0
+	}
+	instr := constExpr[len(constExpr)-1]
+	switch instr.Opcode {
+	case binary.I32Const, binary.I64Const:
+		return instr.Args
+	case binary.F32Const:
+		return math.Float32bits(instr.Args.(float32))
+	case binary.F64Const:
+		return math.Float64bits(instr.Args.(float64))
+	default:
+		panic("TODO")
+	}
 }
 
 func (c *moduleCompiler) genExternalFuncs() {
@@ -132,19 +167,23 @@ func (c *moduleCompiler) genExportedFuncs() {
 	}
 }
 
+func (c *moduleCompiler) genInstanceImpl() {
+	c.genGet()
+	c.genGetGlobalVal()
+	c.genCallFunc()
+}
+
 func (c *moduleCompiler) genGet() {
-	c.print(`
+	c.print(`// instance.Instance
 func (m *aotModule) Get(name string) interface{} {
 	panic("TODO")
-}
-`)
+}`)
 }
 func (c *moduleCompiler) genGetGlobalVal() {
 	c.print(`
 func (m *aotModule) GetGlobalValue(name string) (interface{}, error) {
 	panic("TODO")
-}
-`)
+}`)
 }
 func (c *moduleCompiler) genCallFunc() {
 	c.println("")
@@ -160,6 +199,50 @@ func (c *moduleCompiler) genCallFunc() {
 
 func (c *moduleCompiler) genUtils() {
 	c.print(`
+// memory read
+func (m *aotModule) readU8(offset uint64) byte {
+	var buf [1]byte
+	m.memory.Read(offset, buf[:])
+	return buf[0]
+}
+func (m *aotModule) readU16(offset uint64) uint16 {
+	var buf [2]byte
+	m.memory.Read(offset, buf[:])
+	return LE.Uint16(buf[:])
+}
+func (m *aotModule) readU32(offset uint64) uint32 {
+	var buf [4]byte
+	m.memory.Read(offset, buf[:])
+	return LE.Uint32(buf[:])
+}
+func (m *aotModule) readU64(offset uint64) uint64 {
+	var buf [8]byte
+	m.memory.Read(offset, buf[:])
+	return LE.Uint64(buf[:])
+}
+
+// memory write
+func (m *aotModule) writeU8(offset uint64, n byte) {
+	var buf [1]byte
+	buf[0] = n
+	m.memory.Write(offset, buf[:])
+}
+func (m *aotModule) writeU16(offset uint64, n uint16) {
+	var buf [2]byte
+	LE.PutUint16(buf[:], n)
+	m.memory.Write(offset, buf[:])
+}
+func (m *aotModule) writeU32(offset uint64, n uint32) {
+	var buf [4]byte
+	LE.PutUint32(buf[:], n)
+	m.memory.Write(offset, buf[:])
+}
+func (m *aotModule) writeU64(offset uint64, n uint64) {
+	var buf [8]byte
+	LE.PutUint64(buf[:], n)
+	m.memory.Write(offset, buf[:])
+}
+
 // utils
 func b2i(b bool) uint64 { if b { return 1 } else { return 0 } }
 func f32(i uint64) float32 { return math.Float32frombits(uint32(i)) }
