@@ -79,16 +79,16 @@ func getNativeFuncType(nf interface{}) (ft binary.FuncType, err error) {
 
 	var vt binary.ValType
 	for i := 0; i < nfType.NumIn(); i++ {
-		if vt, err = getNativeValType(nfType.In(i).Kind()); err == nil {
-			ft.ParamTypes = append(ft.ParamTypes, vt)
+		if vt, err = getNativeValType(nfType.In(i).Kind()); err != nil {
+			return
 		}
-		return
+		ft.ParamTypes = append(ft.ParamTypes, vt)
 	}
 	for i := 0; i < nfType.NumOut(); i++ {
-		if vt, err = getNativeValType(nfType.In(i).Kind()); err == nil {
-			ft.ResultTypes = append(ft.ResultTypes, vt)
+		if vt, err = getNativeValType(nfType.Out(i).Kind()); err != nil {
+			return
 		}
-		return
+		ft.ResultTypes = append(ft.ResultTypes, vt)
 	}
 	return
 }
@@ -102,7 +102,7 @@ func getNativeValType(kind reflect.Kind) (binary.ValType, error) {
 	case reflect.Float32:
 		return binary.ValTypeF32, nil
 	case reflect.Float64:
-		return binary.ValTypeF32, nil
+		return binary.ValTypeF64, nil
 	default:
 		return 0, errors.New("unsupported type: " + kind.String())
 	}
