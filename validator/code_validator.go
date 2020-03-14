@@ -6,6 +6,8 @@ import (
 	"github.com/zxh0/wasm.go/binary"
 )
 
+// https://webassembly.github.io/spec/core/appendix/algorithm.html
+
 /*
 type val_type = I32 | I64 | F32 | F64
 type opd_stack = stack(val_type | Unknown)

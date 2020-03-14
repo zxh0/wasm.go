@@ -19,3 +19,13 @@ An experimental [Wasm](https://webassembly.org/) implementation written in Go.
 * **text (WIP)** WAT & WAST compiler powered by [ANTLR](https://www.antlr.org/)
 * **aot (WIP)** AOT (Wasm binary -> Go plugin) compiler
 
+
+
+## Running "Hello, World!"
+
+```
+$ git clone https://github.com/zxh0/wasm.go
+$ cd wasm.go
+$ go run github.com/zxh0/wasm.go/cmd/wasmgo hw.wat
+```
+

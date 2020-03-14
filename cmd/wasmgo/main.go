@@ -70,12 +70,8 @@ func main() {
 				return compileWat(filename)
 			} else if ctx.Bool(flagNameTest) {
 				return testWast(filename)
-			} else if strings.HasSuffix(filename, ".wasm") {
-				return execWasm(filename)
-			} else if strings.HasSuffix(filename, ".so") {
-				return execAOT(filename)
 			} else {
-				return nil
+				return execFile(filename)
 			}
 		},
 	}
@@ -128,29 +124,6 @@ func dumpWasm(filename string) error {
 	return nil
 }
 
-func execWasm(filename string) error {
-	fmt.Println("exec " + filename)
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	module, err := binary.Decode(data)
-	if err != nil {
-		return err
-	}
-
-	mm := map[string]instance.Instance{"env": newTestEnv()}
-	vm, err := interpreter.NewInstance(module, mm)
-	if err != nil {
-		return err
-	}
-
-	//ni.mem, _ = vm.GetMemory("")
-	_, err = vm.CallFunc("main")
-	return err
-}
-
 func compileWat(filename string) error {
 	fmt.Println("compile " + filename)
 	m, err := text.CompileModuleFile(filename)
@@ -177,8 +150,61 @@ func testWast(filename string) error {
 	return spectest.TestWast(s)
 }
 
+func execFile(filename string) error {
+	if strings.HasSuffix(filename, ".wat") {
+		return execWat(filename)
+	}
+	if strings.HasSuffix(filename, ".wasm") {
+		return execWasm(filename)
+	}
+	if strings.HasSuffix(filename, ".so") {
+		return execAOT(filename)
+	}
+	fmt.Println("unknown file format: " + filename)
+	return nil
+}
+
+func execWat(filename string) error {
+	//fmt.Println("exec " + filename)
+	m, err := text.CompileModuleFile(filename)
+	if err != nil {
+		return err
+	}
+
+	iMap := map[string]instance.Instance{"env": newTestEnv()}
+	vm, err := interpreter.NewInstance(*m, iMap)
+	if err != nil {
+		return err
+	}
+
+	_, err = vm.CallFunc("main")
+	return err
+}
+
+func execWasm(filename string) error {
+	//fmt.Println("exec " + filename)
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	module, err := binary.Decode(data)
+	if err != nil {
+		return err
+	}
+
+	iMap := map[string]instance.Instance{"env": newTestEnv()}
+	vm, err := interpreter.NewInstance(module, iMap)
+	if err != nil {
+		return err
+	}
+
+	_, err = vm.CallFunc("main")
+	return err
+}
+
 func execAOT(filename string) error {
-	fmt.Println("exec " + filename)
+	//fmt.Println("exec " + filename)
 	iMap := map[string]instance.Instance{"env": newTestEnv()}
 	i, err := aot.Load(filename, iMap)
 	if err != nil {
