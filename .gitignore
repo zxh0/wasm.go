@@ -17,4 +17,4 @@ target/
 spec/
 
 # binary
-wasmgo
+./wasmgo
