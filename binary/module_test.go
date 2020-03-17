@@ -1,16 +1,13 @@
 package binary
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestDecode(t *testing.T) {
-	bytes, err := ioutil.ReadFile("./testdata/hw_rust.wasm")
-	require.NoError(t, err)
-	module, err := Decode(bytes)
+	module, err := DecodeFile("./testdata/hw_rust.wasm")
 	require.NoError(t, err)
 	require.Equal(t, uint32(MagicNumber), module.Magic)
 	require.Equal(t, uint32(Version), module.Version)
@@ -26,4 +23,6 @@ func TestDecode(t *testing.T) {
 	require.Equal(t, 1, len(module.ElemSec))
 	require.Equal(t, 171, len(module.CodeSec))
 	require.Equal(t, 4, len(module.DataSec))
+
+	Encode(module)
 }

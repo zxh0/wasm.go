@@ -32,7 +32,7 @@ func (v *watVisitor) VisitModule(ctx *parser.ModuleContext) interface{} {
 func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
 	name := getText(ctx.NAME())
 	v.moduleBuilder = newModuleBuilder()
-	v.moduleBuilder.round = 1
+	v.moduleBuilder.pass = 1
 	nv := &watNamesVisitor{
 		errorReporter: v.errorReporter,
 		moduleBuilder: v.moduleBuilder,
@@ -41,7 +41,7 @@ func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
 		field.Accept(v)
 		field.Accept(nv)
 	}
-	v.moduleBuilder.round = 2
+	v.moduleBuilder.pass = 2
 	for _, field := range ctx.AllModuleField() {
 		field.Accept(v)
 	}
@@ -51,7 +51,7 @@ func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
 	}
 }
 func (v *watVisitor) VisitModuleField(ctx *parser.ModuleFieldContext) interface{} {
-	switch v.moduleBuilder.round {
+	switch v.moduleBuilder.pass {
 	case 1: // typeDef
 		if ctx.TypeDef() != nil {
 			ctx.TypeDef().Accept(v)

@@ -13,6 +13,11 @@ func init() {
 	}
 }
 
+func GetOpcode(opname string) (byte, bool) {
+	opcode, found := opMap[opname]
+	return opcode, found
+}
+
 func initOpnames() {
 	opnames = make([]string, 256)
 	opnames[Unreachable] = "unreachable"
@@ -20,6 +25,8 @@ func initOpnames() {
 	opnames[Block] = "block"
 	opnames[Loop] = "loop"
 	opnames[If] = "if"
+	opnames[_Else] = "else"
+	opnames[_End] = "end"
 	opnames[Br] = "br"
 	opnames[BrIf] = "br_if"
 	opnames[BrTable] = "br_table"
@@ -185,9 +192,4 @@ func initOpnames() {
 	opnames[I64ReinterpretF64] = "i64.reinterpret_f64"
 	opnames[F32ReinterpretI32] = "f32.reinterpret_i32"
 	opnames[F64ReinterpretI64] = "f64.reinterpret_i64"
-}
-
-func GetOpcode(opname string) (byte, bool) {
-	opcode, found := opMap[opname]
-	return opcode, found
 }

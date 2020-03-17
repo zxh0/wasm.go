@@ -18,21 +18,14 @@ func TestReads(t *testing.T) {
 		0x03, 0x01, 0x02, 0x03,
 		0x03, 0x66, 0x6f, 0x6f,
 	}}
-	require.Equal(t, byte(0x01), discardError(reader.readByte()))
-	require.Equal(t, uint32(0x05040302), discardError(reader.readU32()))
-	require.Equal(t, float32(1.5), discardError(reader.readF32()))
-	require.Equal(t, 1.5, discardError(reader.readF64()))
-	require.Equal(t, uint32(624485), discardError(reader.readVarU32()))
-	require.Equal(t, int32(-123456), discardError(reader.readVarS32()))
-	require.Equal(t, int64(-123456), discardError(reader.readVarS64()))
-	require.Equal(t, []byte{0x01, 0x02, 0x03}, discardError(reader.readBytes()))
-	require.Equal(t, "foo", discardError(reader.readName()))
+	require.Equal(t, byte(0x01), reader.readByte())
+	require.Equal(t, uint32(0x05040302), reader.readU32())
+	require.Equal(t, float32(1.5), reader.readF32())
+	require.Equal(t, 1.5, reader.readF64())
+	require.Equal(t, uint32(624485), reader.readVarU32())
+	require.Equal(t, int32(-123456), reader.readVarS32())
+	require.Equal(t, int64(-123456), reader.readVarS64())
+	require.Equal(t, []byte{0x01, 0x02, 0x03}, reader.readBytes())
+	require.Equal(t, "foo", reader.readName())
 	require.Equal(t, 0, reader.remaining())
-}
-
-func discardError(x interface{}, err error) interface{} {
-	if err != nil {
-		return err
-	}
-	return x
 }

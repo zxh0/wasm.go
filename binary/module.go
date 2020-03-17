@@ -1,10 +1,5 @@
 package binary
 
-import (
-	"fmt"
-	"io/ioutil"
-)
-
 const (
 	MagicNumber = 0x6D736100 // `\0asm`
 	Version     = 0x00000001 // 1
@@ -25,6 +20,29 @@ const (
 	SecDataID
 )
 
+const (
+	ImportTagFunc   = 0
+	ImportTagTable  = 1
+	ImportTagMem    = 2
+	ImportTagGlobal = 3
+)
+const (
+	ExportTagFunc   = 0
+	ExportTagTable  = 1
+	ExportTagMem    = 2
+	ExportTagGlobal = 3
+)
+
+type (
+	TypeIdx   = uint32
+	FuncIdx   = uint32
+	TableIdx  = uint32
+	MemIdx    = uint32
+	GlobalIdx = uint32
+	LocalIdx  = uint32
+	LabelIdx  = uint32
+)
+
 type Module struct {
 	Magic      uint32
 	Version    uint32
@@ -42,108 +60,75 @@ type Module struct {
 	DataSec    []Data
 }
 
-func DecodeFile(filename string) (Module, error) {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return Module{}, err
-	}
-	return Decode(data)
+//type TypeSec   = []FuncType
+//type ImportSec = []Import
+//type FuncSec   = []TypeIdx
+//type TableSec  = []TableType
+//type MemSec    = []MemType
+//type GlobalSec = []Global
+//type ExportSec = []Export
+//type StartSec  = FuncIdx
+//type ElemSec   = []Elem
+//type CodeSec   = []Code
+//type DataSec   = []Data
+
+type CustomSec struct {
+	Name string
+	// TODO
 }
 
-func Decode(data []byte) (Module, error) {
-	reader := WasmReader{data: data}
-	return readModule(&reader)
+type Import struct {
+	Module string
+	Name   string
+	Desc   ImportDesc
+}
+type ImportDesc struct {
+	Tag      byte
+	FuncType TypeIdx    // tag=0
+	Table    TableType  // tag=1
+	Mem      MemType    // tag=2
+	Global   GlobalType // tag=3
 }
 
-// TODO: return *Module ?
-func readModule(reader *WasmReader) (module Module, err error) {
-	if module.Magic, err = reader.readU32(); err != nil {
-		return
-	}
-	if module.Magic != MagicNumber {
-		err = fmt.Errorf("invalid magic number: 0x%x", module.Magic)
-		return
-	}
-	if module.Version, err = reader.readU32(); err != nil {
-		return
-	}
-	if module.Version != Version {
-		err = fmt.Errorf("unsupported version: %d", module.Version)
-		return
-	}
-	err = readSections(reader, &module)
-	return
+type Global struct {
+	Type GlobalType
+	Expr Expr
 }
 
-func readSections(reader *WasmReader, module *Module) (err error) {
-	lastSecID := byte(0)
-	for reader.remaining() > 0 {
-		var secID byte
-		if secID, err = reader.readByte(); err != nil {
-			return
-		}
-		if secID > SecCustomID {
-			if secID < lastSecID {
-				err = fmt.Errorf("invalid sec ID: %d", secID)
-				return
-			}
-			lastSecID = secID
-		}
-
-		var secCont []byte
-		if secCont, err = reader.readBytes(); err != nil {
-			return
-		}
-		if err = decodeSec(secID, secCont, module); err != nil {
-			return
-		}
-	}
-	return
+type Export struct {
+	Name string
+	Desc ExportDesc
+}
+type ExportDesc struct {
+	Tag byte
+	Idx uint32
 }
 
-func decodeSec(secID byte, cont []byte, module *Module) (err error) {
-	secReader := WasmReader{data: cont}
-	if secID == SecCustomID {
-		var sec CustomSec
-		if sec, err = readCustomSec(&secReader); err != nil {
-			return
-		}
-		module.CustomSecs = append(module.CustomSecs, sec)
-	} else {
-		if err = readNonCustomSec(secID, &secReader, module); err != nil {
-			return
-		}
-	}
-	if secReader.remaining() > 0 {
-		err = fmt.Errorf("invalid sec, id=%d", secID)
-	}
-	return
+type Elem struct {
+	Table  TableIdx
+	Offset Expr
+	Init   []FuncIdx
 }
 
-func readNonCustomSec(secID byte, reader *WasmReader, module *Module) (err error) {
-	switch secID {
-	case SecTypeID:
-		module.TypeSec, err = readTypeSec(reader)
-	case SecImportID:
-		module.ImportSec, err = readImportSec(reader)
-	case SecFuncID:
-		module.FuncSec, err = readIndices(reader)
-	case SecTableID:
-		module.TableSec, err = readTableSec(reader)
-	case SecMemID:
-		module.MemSec, err = readMemSec(reader)
-	case SecGlobalID:
-		module.GlobalSec, err = readGlobalSec(reader)
-	case SecExportID:
-		module.ExportSec, err = readExportSec(reader)
-	case SecStartID:
-		module.StartSec, err = readStartSec(reader)
-	case SecElemID:
-		module.ElemSec, err = readElemSec(reader)
-	case SecCodeID:
-		module.CodeSec, err = readCodeSec(reader)
-	case SecDataID:
-		module.DataSec, err = readDataSec(reader)
+type Code struct {
+	Locals []Locals
+	Expr   Expr
+}
+type Locals struct {
+	N    uint32
+	Type ValType
+}
+
+type Data struct {
+	Mem    MemIdx
+	Offset Expr
+	Init   []byte
+}
+
+func (code Code) GetLocalCount() int {
+	n := 0
+	for _, locals := range code.Locals {
+		n += int(locals.N)
 	}
-	return
+	return n
 }

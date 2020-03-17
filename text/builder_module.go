@@ -5,7 +5,7 @@ import (
 )
 
 type moduleBuilder struct {
-	round    int
+	pass     int
 	module   *binary.Module
 	ftyBySig map[string]int // sig  -> ftyIdx
 	ftyNames *symbolTable   // name -> ftyIdx
