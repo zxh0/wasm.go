@@ -73,7 +73,7 @@ func (c *internalFuncCompiler) compile(idx int,
 
 	paramCount := len(ft.ParamTypes)
 	resultCount := len(ft.ResultTypes)
-	localCount := code.GetLocalCount()
+	localCount := int(code.GetLocalCount())
 
 	c.stackPtr = paramCount + localCount
 	c.stackMax = c.stackPtr

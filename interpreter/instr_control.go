@@ -142,7 +142,7 @@ operand stack:
 */
 func callInternalFunc(vm *vm, f vmFunc) {
 	// alloc locals
-	localCount := f.code.GetLocalCount()
+	localCount := int(f.code.GetLocalCount())
 	for i := 0; i < localCount; i++ {
 		vm.pushU64(0)
 	}

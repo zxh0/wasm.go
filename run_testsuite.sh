@@ -9,6 +9,7 @@ fi
 ./wasmgo -T ./spec/test/core/address.wast > /dev/null
 ./wasmgo -T ./spec/test/core/align.wast > /dev/null
 ./wasmgo -T ./spec/test/core/binary-leb128.wast > /dev/null
+./wasmgo -T ./spec/test/core/binary.wast > /dev/null
 ./wasmgo -T ./spec/test/core/block.wast > /dev/null
 ./wasmgo -T ./spec/test/core/br.wast > /dev/null
 ./wasmgo -T ./spec/test/core/br_if.wast > /dev/null

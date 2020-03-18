@@ -125,10 +125,10 @@ type Data struct {
 	Init   []byte
 }
 
-func (code Code) GetLocalCount() int {
-	n := 0
+func (code Code) GetLocalCount() uint64 {
+	n := uint64(0)
 	for _, locals := range code.Locals {
-		n += int(locals.N)
+		n += uint64(locals.N)
 	}
 	return n
 }

@@ -2,7 +2,6 @@ package binary
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 	"reflect"
 )
@@ -121,7 +120,7 @@ func (writer *WasmWriter) writeScala(val interface{}) {
 	case uint32:
 		writer.writeVarU32(x)
 	default:
-		panic(fmt.Errorf("TODO: %T", x))
+		panic("unreachable")
 	}
 }
 

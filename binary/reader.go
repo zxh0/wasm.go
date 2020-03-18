@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math"
+	"unicode/utf8"
 )
 
 type WasmReader struct {
@@ -45,7 +45,7 @@ func (reader *WasmReader) remaining() int {
 // fixed length value
 func (reader *WasmReader) readByte() byte {
 	if len(reader.data) < 1 {
-		panic(io.EOF)
+		panic(errUnexpectedEnd)
 	}
 	b := reader.data[0]
 	reader.data = reader.data[1:]
@@ -53,7 +53,7 @@ func (reader *WasmReader) readByte() byte {
 }
 func (reader *WasmReader) readU32() uint32 {
 	if len(reader.data) < 4 {
-		panic(io.EOF)
+		panic(errUnexpectedEnd)
 	}
 	n := binary.LittleEndian.Uint32(reader.data)
 	reader.data = reader.data[4:]
@@ -61,7 +61,7 @@ func (reader *WasmReader) readU32() uint32 {
 }
 func (reader *WasmReader) readF32() float32 {
 	if len(reader.data) < 4 {
-		panic(io.EOF)
+		panic(errUnexpectedEnd)
 	}
 	n := binary.LittleEndian.Uint32(reader.data)
 	reader.data = reader.data[4:]
@@ -69,7 +69,7 @@ func (reader *WasmReader) readF32() float32 {
 }
 func (reader *WasmReader) readF64() float64 {
 	if len(reader.data) < 8 {
-		panic(io.EOF)
+		panic(errUnexpectedEnd)
 	}
 	n := binary.LittleEndian.Uint64(reader.data)
 	reader.data = reader.data[8:]
@@ -79,25 +79,16 @@ func (reader *WasmReader) readF64() float64 {
 // variable length value
 func (reader *WasmReader) readVarU32() uint32 {
 	n, w := decodeVarUint(reader.data, 32)
-	if w <= 0 {
-		panic(errors.New("LEB128 error"))
-	}
 	reader.data = reader.data[w:]
 	return uint32(n)
 }
 func (reader *WasmReader) readVarS32() int32 {
 	n, w := decodeVarInt(reader.data, 32)
-	if w <= 0 {
-		panic(errors.New("LEB128 error"))
-	}
 	reader.data = reader.data[w:]
 	return int32(n)
 }
 func (reader *WasmReader) readVarS64() int64 {
 	n, w := decodeVarInt(reader.data, 64)
-	if w <= 0 {
-		panic(errors.New("LEB128 error"))
-	}
 	reader.data = reader.data[w:]
 	return n
 }
@@ -106,27 +97,45 @@ func (reader *WasmReader) readVarS64() int64 {
 func (reader *WasmReader) readBytes() []byte {
 	n := reader.readVarU32()
 	if len(reader.data) < int(n) {
-		panic(io.EOF)
+		panic(errUnexpectedEnd)
 	}
 	bytes := reader.data[:n]
 	reader.data = reader.data[n:]
 	return bytes
 }
 func (reader *WasmReader) readName() string {
-	return string(reader.readBytes())
+	data := reader.readBytes()
+	if !utf8.Valid(data) {
+		panic(errors.New("invalid UTF-8 encoding"))
+	}
+	return string(data)
 }
 
 // module
 func (reader *WasmReader) readModule(module *Module) {
+	if reader.remaining() < 4 {
+		panic(errors.New("unexpected end of magic header"))
+	}
 	module.Magic = reader.readU32()
-	module.Version = reader.readU32()
 	if module.Magic != MagicNumber {
-		panic(fmt.Errorf("invalid magic number: 0x%x", module.Magic))
+		panic(errors.New("magic header not detected"))
 	}
+
+	if reader.remaining() < 4 {
+		panic(errors.New("unexpected end of binary version"))
+	}
+	module.Version = reader.readU32()
 	if module.Version != Version {
-		panic(fmt.Errorf("unsupported version: %d", module.Version))
+		panic(fmt.Errorf("unknown binary version: %d", module.Version))
 	}
+
 	reader.readSections(module)
+	if len(module.FuncSec) != len(module.CodeSec) {
+		panic(errors.New("function and code section have inconsistent lengths"))
+	}
+	if reader.remaining() > 0 {
+		panic(errors.New("junk after last section"))
+	}
 }
 
 // sections
@@ -140,8 +149,11 @@ func (reader *WasmReader) readSections(module *Module) {
 			continue
 		}
 
-		if secID < prevSecID {
-			panic(fmt.Errorf("invalid sec, ID=%d", secID))
+		if secID > SecDataID {
+			panic(fmt.Errorf("invalid section id: %d", secID))
+		}
+		if secID <= prevSecID {
+			panic(fmt.Errorf("junk after last section, id: %d", secID))
 		}
 		prevSecID = secID
 
@@ -149,7 +161,7 @@ func (reader *WasmReader) readSections(module *Module) {
 		remainingBeforeRead := reader.remaining()
 		reader.readNonCustomSec(secID, module)
 		if reader.remaining()+int(n) != remainingBeforeRead {
-			panic(fmt.Errorf("invalid sec, ID=%d", secID))
+			panic(fmt.Errorf("section size mismatch, id: %d", secID))
 		}
 	}
 }
@@ -328,6 +340,10 @@ func (reader *WasmReader) readCode(idx int) Code {
 	if reader.remaining()+int(n) != remainingBeforeRead {
 		panic(fmt.Errorf("invalid code[%d]", idx))
 	}
+	if code.GetLocalCount() >= math.MaxUint32 {
+		panic(fmt.Errorf("too many locals: %d",
+			code.GetLocalCount()))
+	}
 	return code
 }
 func (reader *WasmReader) readLocalsVec() []Locals {
@@ -380,7 +396,7 @@ func checkValType(vt byte) {
 	case ValTypeF32:
 	case ValTypeF64:
 	default:
-		panic(fmt.Errorf("invalid valtype: %d", vt))
+		panic(fmt.Errorf("invalid value type: %d", vt))
 	}
 }
 
@@ -423,7 +439,7 @@ func (reader *WasmReader) readGlobalType() GlobalType {
 	case MutConst:
 	case MutVar:
 	default:
-		panic(fmt.Errorf("invalid mut: %d", gt.Mut))
+		panic(fmt.Errorf("invalid mutability: %d", gt.Mut))
 	}
 	return gt
 }
@@ -559,7 +575,7 @@ func (reader *WasmReader) readMemArg() MemArg {
 func (reader *WasmReader) readZero() byte {
 	b := reader.readByte()
 	if b != 0 {
-		panic(fmt.Errorf("expected 0, got %d", b))
+		panic(fmt.Errorf("zero flag expected, got %d", b))
 	}
 	return 0
 }

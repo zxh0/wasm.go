@@ -34,7 +34,7 @@ func newWastTester(script *text.Script) *wastTester {
 func (t *wastTester) test() (err error) {
 	for _, cmd := range t.script.Cmds {
 		switch x := cmd.(type) {
-		case *text.Module:
+		case *text.WatModule:
 			err = t.instantiate(x)
 		case *text.BinaryModule:
 			t.instantiateBin(x.Data)
@@ -58,7 +58,7 @@ func (t *wastTester) test() (err error) {
 	return
 }
 
-func (t *wastTester) instantiate(m *text.Module) (err error) {
+func (t *wastTester) instantiate(m *text.WatModule) (err error) {
 	t.instance, err = t.wasmImpl.Instantiate(*m.Module, t.instances)
 	if err == nil && m.Name != "" {
 		t.instances[m.Name] = t.instance
@@ -83,19 +83,27 @@ func (t *wastTester) runAssertion(a *text.Assertion) error {
 			result, err := t.runAction(a.Action)
 			return assertTrap(a.Failure, result, err)
 		} else {
-			err := t.instantiate(a.Module.(*text.Module))
+			err := t.instantiate(a.Module.(*text.WatModule))
 			return assertTrap(a.Failure, err, err)
 		}
 	case text.AssertExhaustion:
 		// panic("TODO")
 	case text.AssertMalformed:
-		// panic("TODO")
+		switch m := a.Module.(type) {
+		case *text.BinaryModule:
+			_, err := binary.Decode(m.Data)
+			if a.Failure != "length out of bounds" { // TODO
+				return assertError(a.Failure, err)
+			}
+		case *text.QuotedModule:
+			// panic("TODO")
+		}
 	case text.AssertInvalid:
-		m := *(a.Module.(*text.Module).Module)
+		m := *(a.Module.(*text.WatModule).Module)
 		err := t.wasmImpl.Validate(m)
 		return assertError(a.Failure, err)
 	case text.AssertUnlinkable:
-		err := t.instantiate(a.Module.(*text.Module))
+		err := t.instantiate(a.Module.(*text.WatModule))
 		return assertError(a.Failure, err)
 	default:
 		panic("TODO")

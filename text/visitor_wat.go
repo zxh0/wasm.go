@@ -26,7 +26,7 @@ func newWatVisitor() parser.WASTVisitor {
 }
 
 func (v *watVisitor) VisitModule(ctx *parser.ModuleContext) interface{} {
-	return ctx.WatModule().Accept(v).(*Module).Module
+	return ctx.WatModule().Accept(v).(*WatModule).Module
 }
 
 func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
@@ -45,7 +45,7 @@ func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
 	for _, field := range ctx.AllModuleField() {
 		field.Accept(v)
 	}
-	return &Module{
+	return &WatModule{
 		Name:   name,
 		Module: v.moduleBuilder.module,
 	}

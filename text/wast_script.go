@@ -21,7 +21,7 @@ type Script struct {
 	Cmds []interface{}
 }
 
-type Module struct {
+type WatModule struct {
 	Name   string
 	Module *binary.Module
 }
