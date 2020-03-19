@@ -37,7 +37,7 @@ func (t *wastTester) test() (err error) {
 		case *text.WatModule:
 			err = t.instantiate(x)
 		case *text.BinaryModule:
-			t.instantiateBin(x.Data)
+			t.instantiateBin(x)
 		case *text.QuotedModule:
 			panic("TODO")
 		case *text.Register:
@@ -65,11 +65,13 @@ func (t *wastTester) instantiate(m *text.WatModule) (err error) {
 	}
 	return err
 }
-func (t *wastTester) instantiateBin(data []byte) {
-	_, err := t.wasmImpl.InstantiateBin(data, t.instances)
+func (t *wastTester) instantiateBin(m *text.BinaryModule) {
+	tmp, err := t.wasmImpl.InstantiateBin(m.Data, t.instances)
 	if err != nil {
 		panic(err)
 	}
+	t.instance = tmp
+	t.instances[m.Name] = t.instance
 	// TODO: check
 }
 

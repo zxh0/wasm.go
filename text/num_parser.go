@@ -92,6 +92,8 @@ func parseNaN32(s string) float32 {
 	if s[0] == '-' {
 		f = -f
 		s = s[1:] // remove sign
+	} else if s[0] == '+' {
+		s = s[1:] // remove sign
 	}
 	if strings.HasPrefix(s, "nan:0x") {
 		payload, err := strconv.ParseUint(s[6:], 16, 32)
@@ -108,6 +110,8 @@ func parseNaN64(s string) float64 {
 	f := math.NaN()
 	if s[0] == '-' {
 		f = -f
+		s = s[1:] // remove sign
+	} else if s[0] == '+' {
 		s = s[1:] // remove sign
 	}
 	if strings.HasPrefix(s, "nan:0x") {
