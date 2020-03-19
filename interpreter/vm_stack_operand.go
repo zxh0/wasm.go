@@ -3,26 +3,26 @@ package interpreter
 import "math"
 
 type operandStack struct {
-	data []uint64
+	slots []uint64
 }
 
 func (s *operandStack) stackSize() int {
-	return len(s.data)
+	return len(s.slots)
 }
 
 func (s *operandStack) getLocal(idx uint32) uint64 {
-	return s.data[idx]
+	return s.slots[idx]
 }
 func (s *operandStack) setLocal(idx uint32, val uint64) {
-	s.data[idx] = val
+	s.slots[idx] = val
 }
 
 func (s *operandStack) pushU64(val uint64) {
-	s.data = append(s.data, val)
+	s.slots = append(s.slots, val)
 }
 func (s *operandStack) popU64() uint64 {
-	val := s.data[len(s.data)-1]
-	s.data = s.data[:len(s.data)-1]
+	val := s.slots[len(s.slots)-1]
+	s.slots = s.slots[:len(s.slots)-1]
 	return val
 }
 

@@ -318,7 +318,7 @@ func (vm *vm) logInstr(instr binary.Instruction) {
 			f := vm.funcs[instr.Args.(uint32)]
 			fmt.Printf("call func#%d(", instr.Args)
 			if n := len(f._type.ParamTypes); n > 0 {
-				stack := vm.operandStack.data
+				stack := vm.operandStack.slots
 				fmt.Print(stack[len(stack)-n:])
 			}
 			fmt.Println(")")
