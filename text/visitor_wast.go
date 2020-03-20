@@ -87,7 +87,7 @@ func (v *wastVisitor) VisitAction_(ctx *parser.Action_Context) interface{} {
 }
 
 func (v *wastVisitor) VisitAssertion(ctx *parser.AssertionContext) interface{} {
-	a := Assertion{}
+	a := Assertion{Line: ctx.GetKind().GetLine()}
 
 	switch ctx.GetKind().GetText() {
 	case "assert_return":

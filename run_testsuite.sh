@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -ex
 
-if [[ ! -f wasmgo ]]; then
-  go build github.com/zxh0/wasm.go/cmd/wasmgo
-fi
+go build github.com/zxh0/wasm.go/cmd/wasmgo
 
 WAST_DIR=./spec/test/core
 for f in $WAST_DIR/*.wast ; do

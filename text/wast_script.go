@@ -47,6 +47,7 @@ type Action struct {
 }
 
 type Assertion struct {
+	Line    int
 	Kind    byte
 	Action  *Action
 	Result  []binary.Instruction

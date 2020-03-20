@@ -1,8 +1,12 @@
 package interpreter
 
-import "github.com/zxh0/wasm.go/binary"
+import (
+	"github.com/zxh0/wasm.go/binary"
+)
 
 const (
+	maxCallDepth = 65535
+
 	btBlock = 0
 	btLoop  = 1
 	btFunc  = 2
@@ -17,7 +21,8 @@ type blockFrame struct {
 }
 
 type blockStack struct {
-	frames []*blockFrame
+	frames    []*blockFrame
+	callDepth int
 }
 
 func newBlockFrame(instrs []binary.Instruction, rt binary.BlockType,
@@ -32,6 +37,10 @@ func newBlockFrame(instrs []binary.Instruction, rt binary.BlockType,
 	}
 }
 
+func (bs *blockStack) reset() {
+	bs.frames = bs.frames[0:]
+	bs.callDepth = 0
+}
 func (bs *blockStack) blockDepth() int {
 	return len(bs.frames)
 }
@@ -50,10 +59,19 @@ func (bs *blockStack) topFuncFrame() *blockFrame {
 
 func (bs *blockStack) pushBlockFrame(bf *blockFrame) {
 	bs.frames = append(bs.frames, bf)
+	if bf.bt == btFunc {
+		bs.callDepth++
+		if bs.callDepth > maxCallDepth {
+			panic("call stack exhausted")
+		}
+	}
 }
 func (bs *blockStack) popBlockFrame() *blockFrame {
 	n := len(bs.frames)
 	bf := bs.frames[n-1]
 	bs.frames = bs.frames[:n-1]
+	if bf.bt == btFunc {
+		bs.callDepth--
+	}
 	return bf
 }

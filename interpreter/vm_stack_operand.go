@@ -6,6 +6,9 @@ type operandStack struct {
 	slots []uint64
 }
 
+func (s *operandStack) reset() {
+	s.slots = s.slots[0:]
+}
 func (s *operandStack) stackSize() int {
 	return len(s.slots)
 }

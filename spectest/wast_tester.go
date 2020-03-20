@@ -79,23 +79,25 @@ func (t *wastTester) runAssertion(a *text.Assertion) error {
 	switch a.Kind {
 	case text.AssertReturn:
 		result, err := t.runAction(a.Action)
-		return assertReturn(a.Result, result, err)
+		return assertReturn(a, result, err)
 	case text.AssertTrap:
 		if a.Action != nil {
 			result, err := t.runAction(a.Action)
-			return assertTrap(a.Failure, result, err)
+			return assertTrap(a, result, err)
 		} else {
 			err := t.instantiate(a.Module.(*text.WatModule))
-			return assertTrap(a.Failure, err, err)
+			return assertTrap(a, err, err)
 		}
 	case text.AssertExhaustion:
-		// panic("TODO")
+		// very slow!
+		//_, err := t.runAction(a.Action)
+		//return assertError(a, err)
 	case text.AssertMalformed:
 		switch m := a.Module.(type) {
 		case *text.BinaryModule:
 			_, err := binary.Decode(m.Data)
 			if a.Failure != "length out of bounds" { // TODO
-				return assertError(a.Failure, err)
+				return assertError(a, err)
 			}
 		case *text.QuotedModule:
 			// panic("TODO")
@@ -103,12 +105,12 @@ func (t *wastTester) runAssertion(a *text.Assertion) error {
 	case text.AssertInvalid:
 		m := *(a.Module.(*text.WatModule).Module)
 		err := t.wasmImpl.Validate(m)
-		return assertError(a.Failure, err)
+		return assertError(a, err)
 	case text.AssertUnlinkable:
 		err := t.instantiate(a.Module.(*text.WatModule))
-		return assertError(a.Failure, err)
+		return assertError(a, err)
 	default:
-		panic("TODO")
+		panic("unreachable")
 	}
 	return nil
 }
@@ -131,14 +133,12 @@ func (t *wastTester) runAction(a *text.Action) (interface{}, error) {
 	}
 }
 
-func assertReturn(expected []binary.Instruction,
-	result interface{}, err error) error {
-
+func assertReturn(a *text.Assertion, result interface{}, err error) error {
 	if err != nil {
 		result = err
 	}
 
-	expectedVals := getConsts(expected)
+	expectedVals := getConsts(a.Result)
 	var expectedVal interface{} = nil
 	if n := len(expectedVals); n == 1 {
 		expectedVal = expectedVals[0]
@@ -148,32 +148,35 @@ func assertReturn(expected []binary.Instruction,
 
 	if isNaN32(expectedVal) { // TODO
 		if !isNaN32(result) {
-			return fmt.Errorf("expected return: NaN, got: %v", result)
+			return fmt.Errorf("line: %d, expected return: NaN, got: %v",
+				a.Line, result)
 		}
 	} else if isNaN64(expectedVal) { // TODO
 		if !isNaN64(result) {
-			return fmt.Errorf("expected return: NaN, got: %v", result)
+			return fmt.Errorf("line: %d, expected return: NaN, got: %v",
+				a.Line, result)
 		}
 	} else if result != expectedVal {
-		return fmt.Errorf("expected return: %v, got: %v", expectedVal, result)
+		return fmt.Errorf("line: %d, expected return: %v, got: %v",
+			a.Line, expectedVal, result)
 	}
 	return nil
 }
-func assertTrap(expectedErr string, result interface{}, err error) error {
+func assertTrap(a *text.Assertion, result interface{}, err error) error {
 	if err == nil {
-		return fmt.Errorf("expected trap: %v, got: %v",
-			expectedErr, result)
+		return fmt.Errorf("line: %d, expected trap: %v, got: %v",
+			a.Line, a.Failure, result)
 	}
-	if strings.Index(err.Error(), expectedErr) < 0 {
-		return fmt.Errorf("expected trap: %v, got: %v",
-			expectedErr, err)
+	if strings.Index(err.Error(), a.Failure) < 0 {
+		return fmt.Errorf("line: %d, expected trap: %v, got: %v",
+			a.Line, a.Failure, err)
 	}
 	return nil
 }
-func assertError(expectedErr string, err error) error {
-	if err == nil || strings.Index(err.Error(), expectedErr) < 0 {
-		return fmt.Errorf("expected: %v, got: %v",
-			expectedErr, err)
+func assertError(a *text.Assertion, err error) error {
+	if err == nil || strings.Index(err.Error(), a.Failure) < 0 {
+		return fmt.Errorf("line: %d, expected: %v, got: %v",
+			a.Line, a.Failure, err)
 	}
 	return nil
 }

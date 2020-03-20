@@ -11,12 +11,6 @@ import (
 	"github.com/zxh0/wasm.go/validator"
 )
 
-const (
-	DebugNone  = 0
-	DebugCall  = 1
-	DebugInstr = 2
-)
-
 var _ instance.Instance = (*vm)(nil)
 
 type vm struct {
@@ -30,7 +24,7 @@ type vm struct {
 	funcs   []vmFunc
 
 	local0Idx uint32
-	debug     byte
+	debug     bool
 }
 
 func NewInstance(m binary.Module, instances instance.Map) (instance.Instance, error) {
@@ -38,7 +32,7 @@ func NewInstance(m binary.Module, instances instance.Map) (instance.Instance, er
 		return nil, err
 	}
 
-	vm := &vm{module: m, debug: DebugNone}
+	vm := &vm{module: m, debug: false}
 	if err := vm.linkImports(instances); err != nil {
 		return nil, err
 	}
@@ -255,6 +249,11 @@ func (vm *vm) clearBlock(bf *blockFrame) {
 
 /* func call */
 
+func (vm *vm) reset() {
+	vm.operandStack.reset()
+	vm.blockStack.reset()
+}
+
 func (vm *vm) safeCallFunc(f vmFunc,
 	args []interface{}) (result interface{}, err error) {
 
@@ -262,8 +261,10 @@ func (vm *vm) safeCallFunc(f vmFunc,
 		if _err := recover(); _err != nil {
 			switch x := _err.(type) {
 			case error:
+				vm.reset()
 				err = x
 			case string:
+				vm.reset()
 				err = errors.New(x) // TODO
 			default:
 				panic(err)
@@ -271,7 +272,7 @@ func (vm *vm) safeCallFunc(f vmFunc,
 		}
 	}()
 
-	if vm.debug >= DebugCall {
+	if vm.debug {
 		fmt.Printf("safe call! %v\n", f) // TODO
 	}
 
@@ -308,12 +309,10 @@ func (vm *vm) execInstr(instr binary.Instruction) {
 }
 
 func (vm *vm) logInstr(instr binary.Instruction) {
-	if vm.debug > DebugNone {
+	if vm.debug {
 		fmt.Print(strings.Repeat(">", vm.blockDepth()))
 		if instr.Opcode != binary.Call {
-			if vm.debug >= DebugInstr {
-				fmt.Printf("%s %v\n", instr.GetOpname(), instr.Args)
-			}
+			fmt.Printf("%s %v\n", instr.GetOpname(), instr.Args)
 		} else {
 			f := vm.funcs[instr.Args.(uint32)]
 			fmt.Printf("call func#%d(", instr.Args)
