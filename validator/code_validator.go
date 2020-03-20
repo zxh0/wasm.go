@@ -47,37 +47,26 @@ type codeValidator struct {
 	opds       opdStack
 	ctrls      ctrlStack
 	mv         *moduleValidator
+	codeIdx    int
 	localCount int
 	maxOpds    int
 	instrPath  map[int]string // depth -> opname
 }
 
-func validateCode(mv *moduleValidator,
-	code binary.Code, ft binary.FuncType) (err error, maxOpds int) {
+func validateCode(mv *moduleValidator, idx int,
+	code binary.Code, ft binary.FuncType) {
 
 	cv := &codeValidator{
 		mv:        mv,
+		codeIdx:   idx,
 		instrPath: map[int]string{},
 	}
-
-	defer func() {
-		if _err := recover(); _err != nil {
-			switch x := _err.(type) {
-			case error:
-				err = x
-			default:
-				panic(_err)
-			}
-		}
-	}()
-
 	cv.validateCode(code, ft)
-	maxOpds = cv.maxOpds
-	return
 }
 
 func (cv *codeValidator) error(msg string) {
-	panic(fmt.Errorf("%s: %s", cv.getInstrPath(), msg))
+	panic(fmt.Errorf("code[%d], %s: %s",
+		cv.codeIdx, cv.getInstrPath(), msg))
 }
 func (cv *codeValidator) errorf(format string, a ...interface{}) {
 	cv.error(fmt.Sprintf(format, a...))

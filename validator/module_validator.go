@@ -13,132 +13,117 @@ type moduleValidator struct {
 	importedMemories []binary.Import
 	importedGlobals  []binary.Import
 	globalTypes      []binary.GlobalType
-	maxOperandStacks []int
 }
 
-func Validate(module binary.Module) (err error, maxOperandStacks []int) {
+func Validate(module binary.Module) (err error) {
+	defer func() {
+		if _err := recover(); _err != nil {
+			switch x := _err.(type) {
+			case error:
+				err = x
+			default:
+				panic(_err)
+			}
+		}
+	}()
+	validate(module)
+	return
+}
+
+func validate(module binary.Module) {
 	v := &moduleValidator{module: module}
-	if err = v.validateTypeSec(); err != nil {
-		return
-	}
-	if err = v.validateImportSec(); err != nil {
-		return
-	}
-	if err = v.validateFuncSec(); err != nil {
-		return
-	}
-	if err = v.validateTableSec(); err != nil {
-		return
-	}
-	if err = v.validateMemSec(); err != nil {
-		return
-	}
-	if err = v.validateGlobalSec(); err != nil {
-		return
-	}
-	if err = v.validateExportSec(); err != nil {
-		return
-	}
-	if err = v.validateStartSec(); err != nil {
-		return
-	}
-	if err = v.validateElemSec(); err != nil {
-		return
-	}
-	if err = v.validateCodeSec(); err != nil {
-		return
-	}
-	if err = v.validateDataSec(); err != nil {
-		return
-	}
-	return nil, v.maxOperandStacks
+	v.validateTypeSec()
+	v.validateImportSec()
+	v.validateFuncSec()
+	v.validateTableSec()
+	v.validateMemSec()
+	v.validateGlobalSec()
+	v.validateExportSec()
+	v.validateStartSec()
+	v.validateElemSec()
+	v.validateCodeSec()
+	v.validateDataSec()
 }
 
-func (v *moduleValidator) validateTypeSec() error {
+func (v *moduleValidator) validateTypeSec() {
 	for i, ft := range v.module.TypeSec {
 		if len(ft.ResultTypes) > 1 {
-			return fmt.Errorf("type[%d]: invalid result arity", i)
+			panic(fmt.Errorf("type[%d]: invalid result arity", i))
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateImportSec() error {
+func (v *moduleValidator) validateImportSec() {
 	for i, imp := range v.module.ImportSec {
 		switch imp.Desc.Tag {
 		case binary.ImportTagFunc:
 			v.importedFuncs = append(v.importedFuncs, imp)
 			if int(imp.Desc.FuncType) >= v.getTypeCount() {
-				return fmt.Errorf("import[%d]: unknown type: %d",
-					i, imp.Desc.FuncType)
+				panic(fmt.Errorf("import[%d]: unknown type: %d",
+					i, imp.Desc.FuncType))
 			}
 		case binary.ImportTagTable:
 			if len(v.importedTables) > 0 {
-				return fmt.Errorf("multiple tables")
+				panic(fmt.Errorf("multiple tables"))
 			}
 			v.importedTables = append(v.importedTables, imp)
-			if err := validateTableType(imp.Desc.Table.Limits); err != nil {
-				return fmt.Errorf("import[%d]: %s", i, err.Error())
+			if err := validateTableType(imp.Desc.Table.Limits); err != "" {
+				panic(fmt.Errorf("import[%d]: %s", i, err))
 			}
 		case binary.ImportTagMem:
 			if len(v.importedMemories) > 0 {
-				return fmt.Errorf("multiple memories")
+				panic(fmt.Errorf("multiple memories"))
 			}
 			v.importedMemories = append(v.importedMemories, imp)
-			if err := validateMemoryType(imp.Desc.Mem); err != nil {
-				return fmt.Errorf("import[%d]: %s", i, err.Error())
+			if err := validateMemoryType(imp.Desc.Mem); err != "" {
+				panic(fmt.Errorf("import[%d]: %s", i, err))
 			}
 		case binary.ImportTagGlobal:
 			v.importedGlobals = append(v.importedGlobals, imp)
 			v.globalTypes = append(v.globalTypes, imp.Desc.Global)
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateFuncSec() error {
+func (v *moduleValidator) validateFuncSec() {
 	for i, ftIdx := range v.module.FuncSec {
 		if int(ftIdx) >= v.getTypeCount() {
-			return fmt.Errorf("func[%d]: unknown type: %d", i, ftIdx)
+			panic(fmt.Errorf("func[%d]: unknown type: %d", i, ftIdx))
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateTableSec() error {
+func (v *moduleValidator) validateTableSec() {
 	for i, table := range v.module.TableSec {
 		if i+v.getImportedTableCount() > 0 {
-			return fmt.Errorf("multiple tables")
+			panic(fmt.Errorf("multiple tables"))
 		}
-		if err := validateTableType(table.Limits); err != nil {
-			return fmt.Errorf("table[%d]: %s", i, err.Error())
+		if err := validateTableType(table.Limits); err != "" {
+			panic(fmt.Errorf("table[%d]: %s", i, err))
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateMemSec() error {
+func (v *moduleValidator) validateMemSec() {
 	for i, mem := range v.module.MemSec {
 		if i+v.getImportedMemCount() > 0 {
-			return fmt.Errorf("multiple memories")
+			panic(fmt.Errorf("multiple memories"))
 		}
-		if err := validateMemoryType(mem); err != nil {
-			return fmt.Errorf("mem[%d]: %s", i, err.Error())
+		if err := validateMemoryType(mem); err != "" {
+			panic(fmt.Errorf("mem[%d]: %s", i, err))
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateGlobalSec() error {
+func (v *moduleValidator) validateGlobalSec() {
 	for i, g := range v.module.GlobalSec {
-		if err := v.validateConstExpr(g.Expr, g.Type.ValType); err != nil {
-			return fmt.Errorf("global[%d]: %s",
-				i+v.getImportedGlobalCount(), err.Error())
+		if err := v.validateConstExpr(g.Expr, g.Type.ValType); err != "" {
+			panic(fmt.Errorf("global[%d]: %s",
+				i+v.getImportedGlobalCount(), err))
 		}
 		v.globalTypes = append(v.globalTypes, g.Type)
 	}
-	return nil
 }
-func (v *moduleValidator) validateExportSec() error {
+func (v *moduleValidator) validateExportSec() {
 	exportedNames := map[string]bool{}
 	for i, exp := range v.module.ExportSec {
 		if exportedNames[exp.Name] {
-			return fmt.Errorf("duplicate export name: %s", exp.Name)
+			panic(fmt.Errorf("duplicate export name: %s", exp.Name))
 		} else {
 			exportedNames[exp.Name] = true
 		}
@@ -146,88 +131,78 @@ func (v *moduleValidator) validateExportSec() error {
 		switch exp.Desc.Tag {
 		case binary.ExportTagFunc:
 			if int(exp.Desc.Idx) >= v.getFuncCount() {
-				return fmt.Errorf("export[%d]: unknown function: %d",
-					i, exp.Desc.Idx)
+				panic(fmt.Errorf("export[%d]: unknown function: %d",
+					i, exp.Desc.Idx))
 			}
 		case binary.ExportTagTable:
 			if int(exp.Desc.Idx) >= v.getTableCount() {
-				return fmt.Errorf("export[%d]: unknown table: %d",
-					i, exp.Desc.Idx)
+				panic(fmt.Errorf("export[%d]: unknown table: %d",
+					i, exp.Desc.Idx))
 			}
 		case binary.ExportTagMem:
 			if int(exp.Desc.Idx) >= v.getMemCount() {
-				return fmt.Errorf("export[%d]: unknown memory: %d",
-					i, exp.Desc.Idx)
+				panic(fmt.Errorf("export[%d]: unknown memory: %d",
+					i, exp.Desc.Idx))
 			}
 		case binary.ExportTagGlobal:
 			if int(exp.Desc.Idx) >= v.getGlobalCount() {
-				return fmt.Errorf("export[%d]: unknown global: %d",
-					i, exp.Desc.Idx)
+				panic(fmt.Errorf("export[%d]: unknown global: %d",
+					i, exp.Desc.Idx))
 			}
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateStartSec() error {
+func (v *moduleValidator) validateStartSec() {
 	if v.module.StartSec != nil {
 		idx := int(*v.module.StartSec)
 		ft, ok := v.getFuncType(idx)
 		if !ok {
-			return fmt.Errorf("start function: unknown function: %d", idx)
+			panic(fmt.Errorf("start function: unknown function: %d", idx))
 		}
 		if len(ft.ParamTypes) > 0 || len(ft.ResultTypes) > 0 {
-			return fmt.Errorf("start function: unknown type: %d", idx)
+			panic(fmt.Errorf("start function: unknown type: %d", idx))
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateElemSec() error {
+func (v *moduleValidator) validateElemSec() {
 	for i, elem := range v.module.ElemSec {
 		if int(elem.Table) >= v.getTableCount() {
-			return fmt.Errorf("elem[%d]: unknown table: %d", i, elem.Table)
+			panic(fmt.Errorf("elem[%d]: unknown table: %d", i, elem.Table))
 		}
-		if err := v.validateConstExpr(elem.Offset, binary.ValTypeI32); err != nil {
-			return fmt.Errorf("elem[%d]: %s", i, err.Error())
+		if err := v.validateConstExpr(elem.Offset, binary.ValTypeI32); err != "" {
+			panic(fmt.Errorf("elem[%d]: %s", i, err))
 		}
 		for j, funcIdx := range elem.Init {
 			if int(funcIdx) >= v.getFuncCount() {
-				return fmt.Errorf("elem[%d][%d]: unknown function: %d", i, j, funcIdx)
+				panic(fmt.Errorf("elem[%d][%d]: unknown function: %d", i, j, funcIdx))
 			}
 		}
 	}
-	return nil
 }
-func (v *moduleValidator) validateCodeSec() error {
+func (v *moduleValidator) validateCodeSec() {
 	if len(v.module.CodeSec) != len(v.module.FuncSec) {
-		return fmt.Errorf("invalid code count")
+		panic(fmt.Errorf("invalid code count"))
 	}
-
 	for i, code := range v.module.CodeSec {
 		ftIdx := v.module.FuncSec[i]
 		ft := v.module.TypeSec[ftIdx]
-		err, maxOpds := validateCode(v, code, ft)
-		v.maxOperandStacks = append(v.maxOperandStacks, maxOpds)
-		if err != nil {
-			return fmt.Errorf("code#%d, %s", i, err.Error())
-		}
+		validateCode(v, i, code, ft)
 	}
-	return nil
 }
-func (v *moduleValidator) validateDataSec() error {
+func (v *moduleValidator) validateDataSec() {
 	for i, data := range v.module.DataSec {
 		if int(data.Mem) >= v.getMemCount() {
-			return fmt.Errorf("data#%d: unknown memory: %d", i, data.Mem)
+			panic(fmt.Errorf("data[%d]: unknown memory: %d", i, data.Mem))
 		}
-		if err := v.validateConstExpr(data.Offset, binary.ValTypeI32); err != nil {
-			return fmt.Errorf("data#%d: %s", i, err.Error())
+		if err := v.validateConstExpr(data.Offset, binary.ValTypeI32); err != "" {
+			panic(fmt.Errorf("data[%d]: %s", i, err))
 		}
 	}
-	return nil
 }
 
 // TODO
 func (v *moduleValidator) validateConstExpr(expr []binary.Instruction,
-	expectedType binary.ValType) error {
+	expectedType binary.ValType) (errMsg string) {
 
 	if len(expr) > 1 {
 		for _, instr := range expr {
@@ -236,10 +211,10 @@ func (v *moduleValidator) validateConstExpr(expr []binary.Instruction,
 				binary.F32Const, binary.F64Const,
 				binary.GlobalGet:
 			default:
-				return fmt.Errorf("constant expression required")
+				return "constant expression required"
 			}
 		}
-		return fmt.Errorf("type mismatch") // TODO
+		return "type mismatch" // TODO
 	}
 
 	var actualType byte = 0
@@ -256,18 +231,18 @@ func (v *moduleValidator) validateConstExpr(expr []binary.Instruction,
 		case binary.GlobalGet:
 			gIdx := expr[0].Args.(uint32)
 			if int(gIdx) >= len(v.globalTypes) {
-				return fmt.Errorf("unknown global: %d", gIdx)
+				return fmt.Sprintf("unknown global: %d", gIdx)
 			}
 			actualType = v.globalTypes[gIdx].ValType
 		default:
-			return fmt.Errorf("constant expression required")
+			return "constant expression required"
 		}
 	}
 	if actualType != expectedType {
-		return fmt.Errorf("type mismatch") // TODO
+		return "type mismatch" // TODO
 	}
 
-	return nil
+	return ""
 }
 
 func (v *moduleValidator) getImportedFuncCount() int {
@@ -324,16 +299,16 @@ func (v *moduleValidator) getFuncType(fIdx int) (binary.FuncType, bool) {
 	return binary.FuncType{}, false
 }
 
-func validateTableType(limits binary.Limits) error {
+func validateTableType(limits binary.Limits) string {
 	return validateLimits(limits, 1<<31, "table")
 }
-func validateMemoryType(limits binary.Limits) error {
+func validateMemoryType(limits binary.Limits) string {
 	return validateLimits(limits, 1<<16, "mem")
 }
-func validateLimits(limits binary.Limits, k uint32, kind string) error {
+func validateLimits(limits binary.Limits, k uint32, kind string) (errMsg string) {
 	if limits.Min > k {
 		if kind == "mem" {
-			return fmt.Errorf("memory size must be at most 65536 pages (4GiB)")
+			return "memory size must be at most 65536 pages (4GiB)"
 		} else {
 			// TODO
 		}
@@ -341,14 +316,14 @@ func validateLimits(limits binary.Limits, k uint32, kind string) error {
 	if limits.Tag == 1 {
 		if limits.Max > k {
 			if kind == "mem" {
-				return fmt.Errorf("memory size must be at most 65536 pages (4GiB)")
+				return "memory size must be at most 65536 pages (4GiB)"
 			} else {
 				// TODO
 			}
 		}
 		if limits.Max < limits.Min {
-			return fmt.Errorf("size minimum must not be greater than maximum")
+			return "size minimum must not be greater than maximum"
 		}
 	}
-	return nil
+	return ""
 }

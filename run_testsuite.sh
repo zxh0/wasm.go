@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -ex
 
-# alias wasmgo="go run github.com/zxh0/wasm.go/cmd/wasmgo"
 if [[ ! -f wasmgo ]]; then
   go build github.com/zxh0/wasm.go/cmd/wasmgo
 fi
@@ -16,4 +15,5 @@ for f in $WAST_DIR/*.wast ; do
   fi
 done
 
+rm wasmgo
 echo "OK!"

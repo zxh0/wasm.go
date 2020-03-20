@@ -23,9 +23,21 @@ An experimental [Wasm](https://webassembly.org/) implementation written in Go.
 
 ## Running "Hello, World!"
 
-```
+Interpreter mode:
+
+```bash
 $ git clone https://github.com/zxh0/wasm.go
 $ cd wasm.go
 $ go run github.com/zxh0/wasm.go/cmd/wasmgo hw.wat
+```
+
+AOT mode:
+
+```bash
+$ git clone https://github.com/zxh0/wasm.go
+$ cd wasm.go
+$ go run github.com/zxh0/wasm.go/cmd/wasmgo -aot hw.wat > hw.wasm.go
+$ go build -buildmode=plugin -o hw.so hw.wasm.go
+$ go run github.com/zxh0/wasm.go/cmd/wasmgo hw.so
 ```
 

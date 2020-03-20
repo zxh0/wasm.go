@@ -92,12 +92,19 @@ func boolFlag(name, alias, usage string, value bool) cli.Flag {
 
 func aotWasm(filename string) error {
 	//fmt.Println("AOT " + filename)
-	module, err := binary.DecodeFile(filename)
-	if err != nil {
-		return err
+	if strings.HasSuffix(filename, ".wat") {
+		if m, err := text.CompileModuleFile(filename); err != nil {
+			return err
+		} else {
+			aot.Compile(*m)
+			return nil
+		}
 	}
-	// TODO
-	aot.Compile(module)
+	if m, err := binary.DecodeFile(filename); err != nil {
+		return err
+	} else {
+		aot.Compile(m)
+	}
 	return nil
 }
 
@@ -107,9 +114,7 @@ func checkWasm(filename string) error {
 	if err != nil {
 		return err
 	}
-
-	err, _ = validator.Validate(module)
-	return err
+	return validator.Validate(module)
 }
 
 func dumpWasm(filename string) error {

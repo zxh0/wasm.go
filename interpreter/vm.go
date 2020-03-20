@@ -34,7 +34,7 @@ type vm struct {
 }
 
 func NewInstance(m binary.Module, instances instance.Map) (instance.Instance, error) {
-	if err, _ := validator.Validate(m); err != nil {
+	if err := validator.Validate(m); err != nil {
 		return nil, err
 	}
 
