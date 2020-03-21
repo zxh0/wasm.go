@@ -62,7 +62,7 @@ func (bs *blockStack) pushBlockFrame(bf *blockFrame) {
 	if bf.bt == btFunc {
 		bs.callDepth++
 		if bs.callDepth > maxCallDepth {
-			panic("call stack exhausted")
+			panic(errCallStackOverflow)
 		}
 	}
 }

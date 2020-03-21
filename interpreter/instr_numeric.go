@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"errors"
 	"math"
 	"math/bits"
 )
@@ -187,7 +186,7 @@ func i32Mul(vm *vm, _ interface{}) {
 func i32DivS(vm *vm, _ interface{}) {
 	v2, v1 := vm.popS32(), vm.popS32()
 	if v1 == math.MinInt32 && v2 == -1 {
-		panic(errors.New("integer overflow"))
+		panic(errIntOverflow)
 	}
 	vm.pushS32(v1 / v2)
 }
@@ -261,7 +260,7 @@ func i64Mul(vm *vm, _ interface{}) {
 func i64DivS(vm *vm, _ interface{}) {
 	v2, v1 := vm.popS64(), vm.popS64()
 	if v1 == math.MinInt64 && v2 == -1 {
-		panic(errors.New("integer overflow"))
+		panic(errIntOverflow)
 	}
 	vm.pushS64(v1 / v2)
 }
@@ -455,40 +454,40 @@ func i32WrapI64(vm *vm, _ interface{}) {
 func i32TruncF32S(vm *vm, _ interface{}) {
 	f := math.Trunc(float64(vm.popF32()))
 	if f > math.MaxInt32 || f < math.MinInt32 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushS32(int32(f))
 }
 func i32TruncF32U(vm *vm, _ interface{}) {
 	f := math.Trunc(float64(vm.popF32()))
 	if f > math.MaxUint32 || f < 0 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushU32(uint32(f))
 }
 func i32TruncF64S(vm *vm, _ interface{}) {
 	f := math.Trunc(vm.popF64())
 	if f > math.MaxInt32 || f < math.MinInt32 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushS32(int32(f))
 }
 func i32TruncF64U(vm *vm, _ interface{}) {
 	f := math.Trunc(vm.popF64())
 	if f > math.MaxUint32 || f < 0 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushU32(uint32(f))
 }
@@ -501,40 +500,40 @@ func i64ExtendI32U(vm *vm, _ interface{}) {
 func i64TruncF32S(vm *vm, _ interface{}) {
 	f := math.Trunc(float64(vm.popF32()))
 	if f >= math.MaxInt64 || f < math.MinInt64 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushS64(int64(f))
 }
 func i64TruncF32U(vm *vm, _ interface{}) {
 	f := math.Trunc(float64(vm.popF32()))
 	if f >= math.MaxUint64 || f < 0 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushU64(uint64(f))
 }
 func i64TruncF64S(vm *vm, _ interface{}) {
 	f := math.Trunc(vm.popF64())
 	if f >= math.MaxInt64 || f < math.MinInt64 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushS64(int64(f))
 }
 func i64TruncF64U(vm *vm, _ interface{}) {
 	f := math.Trunc(vm.popF64())
 	if f >= math.MaxUint64 || f < 0 {
-		panic("integer overflow")
+		panic(errIntOverflow)
 	}
 	if math.IsNaN(f) {
-		panic("invalid conversion to integer")
+		panic(errConvertToInt)
 	}
 	vm.pushU64(uint64(f))
 }

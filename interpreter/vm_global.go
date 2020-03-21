@@ -33,7 +33,7 @@ func (g *globalVar) Get() uint64 {
 }
 func (g *globalVar) Set(val uint64) {
 	if g._type.Mut != 1 {
-		panic("constant global!")
+		panic(errImmutableGlobal)
 	}
 	g.val = val
 }

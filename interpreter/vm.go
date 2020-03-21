@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -27,88 +26,79 @@ type vm struct {
 	debug     bool
 }
 
-func NewInstance(m binary.Module, instances instance.Map) (instance.Instance, error) {
+func NewInstance(m binary.Module, instances instance.Map) (inst instance.Instance, err error) {
 	if err := validator.Validate(m); err != nil {
 		return nil, err
 	}
 
-	vm := &vm{module: m, debug: false}
-	if err := vm.linkImports(instances); err != nil {
-		return nil, err
-	}
+	defer func() {
+		if _err := recover(); _err != nil {
+			switch x := _err.(type) {
+			case error:
+				err = x
+			default:
+				panic(err)
+			}
+		}
+	}()
 
+	vm := &vm{module: m, debug: false}
+	vm.linkImports(instances)
 	vm.initFuncs()
-	if err := vm.initTableAndMem(); err != nil {
-		return nil, err
-	}
+	vm.initTableAndMem()
 	vm.initGlobals()
-	if err := vm.execStartFunc(); err != nil {
-		return nil, err
-	}
-	return vm, nil
+	vm.execStartFunc()
+	inst = vm
+	return
 }
 
 /* linking */
 
-func (vm *vm) linkImports(instances instance.Map) error {
+func (vm *vm) linkImports(instances instance.Map) {
 	for _, imp := range vm.module.ImportSec {
-		m := instances[imp.Module]
-		if m == nil {
-			return fmt.Errorf("module not found: " + imp.Module)
-		}
-		if err := vm.linkImport(m, imp); err != nil {
-			return err
+		if m := instances[imp.Module]; m == nil {
+			panic(fmt.Errorf("module not found: " + imp.Module))
+		} else {
+			vm.linkImport(m, imp)
 		}
 	}
-	return nil
 }
-func (vm *vm) linkImport(m instance.Instance, imp binary.Import) error {
+func (vm *vm) linkImport(m instance.Instance, imp binary.Import) {
 	exported := m.Get(imp.Name)
 	if exported == nil {
-		return fmt.Errorf("unknown import: %s.%s",
-			imp.Module, imp.Name)
+		panic(fmt.Errorf("unknown import: %s.%s",
+			imp.Module, imp.Name))
 	}
 
 	typeMatched := false
-
 	switch x := exported.(type) {
 	case instance.Function:
 		if imp.Desc.Tag == binary.ImportTagFunc {
 			expectedFT := vm.module.TypeSec[imp.Desc.FuncType]
-			if isFuncTypeMatch(expectedFT, x.Type()) {
-				typeMatched = true
-				vm.funcs = append(vm.funcs,
-					newExternalFunc(vm, expectedFT, x))
-			}
+			typeMatched = isFuncTypeMatch(expectedFT, x.Type())
+			vm.funcs = append(vm.funcs, newExternalFunc(vm, expectedFT, x))
 		}
 	case instance.Table:
 		if imp.Desc.Tag == binary.ImportTagTable {
-			if isLimitsMatch(imp.Desc.Table.Limits, x.Type().Limits) {
-				typeMatched = true
-				vm.table = x
-			}
+			typeMatched = isLimitsMatch(imp.Desc.Table.Limits, x.Type().Limits)
+			vm.table = x
 		}
 	case instance.Memory:
 		if imp.Desc.Tag == binary.ImportTagMem {
-			if isLimitsMatch(imp.Desc.Mem, x.Type()) {
-				typeMatched = true
-				vm.memory = x
-			}
+			typeMatched = isLimitsMatch(imp.Desc.Mem, x.Type())
+			vm.memory = x
 		}
 	case instance.Global:
 		if imp.Desc.Tag == binary.ImportTagGlobal {
-			if isGlobalTypeMatch(imp.Desc.Global, x.Type()) {
-				typeMatched = true
-				vm.globals = append(vm.globals, x)
-			}
+			typeMatched = isGlobalTypeMatch(imp.Desc.Global, x.Type())
+			vm.globals = append(vm.globals, x)
 		}
 	}
 
 	if !typeMatched {
-		return fmt.Errorf("incompatible import type: %s.%s",
-			imp.Module, imp.Name)
+		panic(fmt.Errorf("incompatible import type: %s.%s",
+			imp.Module, imp.Name))
 	}
-	return nil
 }
 
 /* init */
@@ -121,26 +111,19 @@ func (vm *vm) initFuncs() {
 	}
 }
 
-func (vm *vm) initTableAndMem() error {
+func (vm *vm) initTableAndMem() {
 	if len(vm.module.TableSec) > 0 {
 		vm.table = newTable(vm.module.TableSec[0])
 	}
 	if len(vm.module.MemSec) > 0 {
 		vm.memory = newMemory(vm.module.MemSec[0])
 	}
-	elemOffsets, err := vm.calcElemOffsets()
-	if err != nil {
-		return err
-	}
-	dataOffsets, err := vm.calcDataOffsets()
-	if err != nil {
-		return err
-	}
+	elemOffsets := vm.calcElemOffsets()
+	dataOffsets := vm.calcDataOffsets()
 	vm.initTable(elemOffsets)
 	vm.initMemory(dataOffsets)
-	return nil
 }
-func (vm *vm) calcElemOffsets() ([]uint32, error) {
+func (vm *vm) calcElemOffsets() []uint32 {
 	offsets := make([]uint32, len(vm.module.ElemSec))
 	for i, elem := range vm.module.ElemSec {
 		vm.execConstExpr(elem.Offset)
@@ -149,15 +132,14 @@ func (vm *vm) calcElemOffsets() ([]uint32, error) {
 		upperBound := vm.table.Type().Limits.Min
 		if offset > 0 || dataLen > 0 {
 			if uint64(offset)+uint64(dataLen) > uint64(upperBound) {
-				return nil, fmt.Errorf("elements segment does not fit")
+				panic(fmt.Errorf("elements segment does not fit"))
 			}
 		}
-		// ok
 		offsets[i] = offset
 	}
-	return offsets, nil
+	return offsets
 }
-func (vm *vm) calcDataOffsets() ([]uint64, error) {
+func (vm *vm) calcDataOffsets() []uint64 {
 	offsets := make([]uint64, len(vm.module.DataSec))
 	for i, data := range vm.module.DataSec {
 		vm.execConstExpr(data.Offset)
@@ -166,13 +148,12 @@ func (vm *vm) calcDataOffsets() ([]uint64, error) {
 		upperBound := uint64(vm.memory.Type().Min) * binary.PageSize
 		if offset > 0 || dataLen > 0 {
 			if offset+dataLen > upperBound {
-				return nil, fmt.Errorf("data segment does not fit")
+				panic(fmt.Errorf("data segment does not fit"))
 			}
 		}
-		// ok
 		offsets[i] = offset
 	}
-	return offsets, nil
+	return offsets
 }
 func (vm *vm) initTable(offsets []uint32) {
 	for i, elem := range vm.module.ElemSec {
@@ -206,13 +187,11 @@ func (vm *vm) execConstExpr(expr []binary.Instruction) {
 		vm.execInstr(instr)
 	}
 }
-func (vm *vm) execStartFunc() error {
-	if vm.module.StartSec == nil {
-		return nil
+func (vm *vm) execStartFunc() {
+	if vm.module.StartSec != nil {
+		idx := *vm.module.StartSec
+		vm.callFunc(vm.funcs[idx], nil)
 	}
-	idx := *vm.module.StartSec
-	_, err := vm.safeCallFunc(vm.funcs[idx], nil)
-	return err
 }
 
 /* block stack */
@@ -263,9 +242,6 @@ func (vm *vm) safeCallFunc(f vmFunc,
 			case error:
 				vm.reset()
 				err = x
-			case string:
-				vm.reset()
-				err = errors.New(x) // TODO
 			default:
 				panic(err)
 			}

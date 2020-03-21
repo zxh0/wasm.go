@@ -160,7 +160,7 @@ func (v *moduleValidator) validateStartSec() {
 			panic(fmt.Errorf("start function: unknown function: %d", idx))
 		}
 		if len(ft.ParamTypes) > 0 || len(ft.ResultTypes) > 0 {
-			panic(fmt.Errorf("start function: unknown type: %d", idx))
+			panic(fmt.Errorf("start function: invalid type: %d", idx))
 		}
 	}
 }

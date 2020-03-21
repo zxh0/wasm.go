@@ -62,6 +62,6 @@ func (mem *memory) Write(offset uint64, data []byte) {
 
 func (mem *memory) checkOffset(offset uint64, length int) {
 	if int64(len(mem.data)-length) < int64(offset) {
-		panic("out of bounds memory access")
+		panic(errMemOutOfBounds)
 	}
 }

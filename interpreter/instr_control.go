@@ -5,7 +5,7 @@ import (
 )
 
 func unreachable(vm *vm, _ interface{}) {
-	panic("unreachable") // TODO
+	panic(errTrap)
 }
 
 func nop(vm *vm, _ interface{}) {
@@ -157,12 +157,12 @@ func callIndirect(vm *vm, args interface{}) {
 
 	i := vm.popU32()
 	if i >= vm.table.Size() {
-		panic("undefined element") // TODO
+		panic(errUndefinedElem)
 	}
 
 	f := vm.table.GetElem(i)
 	if f.Type().GetSignature() != ft.GetSignature() {
-		panic("indirect call type mismatch") // TODO
+		panic(errTypeMismatch)
 	}
 
 	// optimize internal func call

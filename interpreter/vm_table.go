@@ -46,7 +46,7 @@ func (t table) GetElem(idx uint32) instance.Function {
 	t.checkIdx(idx)
 	elem := t.elems[idx]
 	if elem == nil {
-		panic("uninitialized element") // TODO
+		panic(errUninitializedElem)
 	}
 	return elem
 }
@@ -57,6 +57,6 @@ func (t table) SetElem(idx uint32, elem instance.Function) {
 
 func (t table) checkIdx(idx uint32) {
 	if idx >= uint32(len(t.elems)) {
-		panic("undefined element")
+		panic(errUndefinedElem)
 	}
 }
