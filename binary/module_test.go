@@ -1,6 +1,7 @@
 package binary
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,6 +24,15 @@ func TestDecode(t *testing.T) {
 	require.Equal(t, 1, len(module.ElemSec))
 	require.Equal(t, 171, len(module.CodeSec))
 	require.Equal(t, 4, len(module.DataSec))
+}
 
-	Encode(module)
+func TestEncode(t *testing.T) {
+	data, err := ioutil.ReadFile("./testdata/hw.wasm")
+	require.NoError(t, err)
+
+	module, err := Decode(data)
+	require.NoError(t, err)
+
+	data2 := Encode(module)
+	require.Equal(t, data, data2)
 }

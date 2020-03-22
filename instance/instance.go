@@ -24,16 +24,16 @@ type Table interface {
 	SetElem(idx uint32, elem Function)
 }
 
-type Global interface {
-	Type() binary.GlobalType
-	Get() uint64
-	Set(val uint64)
-}
-
 type Memory interface {
 	Type() binary.MemType
 	Size() uint32 // page count
 	Grow(n uint32) uint32
 	Read(offset uint64, buf []byte)
 	Write(offset uint64, buf []byte)
+}
+
+type Global interface {
+	Type() binary.GlobalType
+	Get() uint64
+	Set(val uint64)
 }

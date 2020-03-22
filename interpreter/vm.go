@@ -357,7 +357,6 @@ func (vm *vm) Get(name string) interface{} {
 			}
 		}
 	}
-
 	return nil
 }
 

@@ -415,7 +415,7 @@ func (reader *WasmReader) readFuncType() FuncType {
 		ParamTypes:  reader.readValTypes(),
 		ResultTypes: reader.readValTypes(),
 	}
-	if ft.Tag != 0x60 {
+	if ft.Tag != FtTag {
 		panic(fmt.Errorf("invalid functype tag: %d", ft.Tag))
 	}
 	return ft

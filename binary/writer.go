@@ -157,8 +157,8 @@ func (writer *WasmWriter) writeCode(code Code) {
 	codeWriter := &WasmWriter{}
 	codeWriter.writeLen(len(code.Locals))
 	for _, locals := range code.Locals {
-		writer.writeVarU32(locals.N)
-		writer.writeByte(locals.Type)
+		codeWriter.writeVarU32(locals.N)
+		codeWriter.writeByte(locals.Type)
 	}
 	codeWriter.writeExpr(code.Expr)
 	writer.writeBytes(codeWriter.buf)
@@ -170,7 +170,15 @@ func (writer *WasmWriter) writeData(data Data) {
 }
 
 // types
+func (writer *WasmWriter) writeBlockType(bt BlockType) {
+	if len(bt) == 0 {
+		writer.writeByte(NoVal)
+	} else {
+		writer.writeByte(bt[0])
+	}
+}
 func (writer *WasmWriter) writeFuncType(ft FuncType) {
+	writer.writeByte(FtTag)
 	writer.writeVec(ft.ParamTypes)
 	writer.writeVec(ft.ResultTypes)
 }
@@ -191,5 +199,52 @@ func (writer *WasmWriter) writeLimits(limits Limits) {
 }
 
 func (writer *WasmWriter) writeExpr(expr Expr) {
-	// TODO
+	for _, instr := range expr {
+		writer.writeInstr(instr)
+	}
+	writer.writeByte(_End)
+}
+
+func (writer *WasmWriter) writeInstr(instr Instruction) {
+	writer.writeByte(instr.Opcode)
+	switch instr.Opcode {
+	case Block, Loop:
+		args := instr.Args.(BlockArgs)
+		writer.writeBlockType(args.RT)
+		writer.writeExpr(args.Instrs)
+	case If:
+		args := instr.Args.(IfArgs)
+		writer.writeBlockType(args.RT)
+		writer.writeExpr(args.Instrs1)
+		writer.buf[len(writer.buf)-1] = _Else
+		writer.writeExpr(args.Instrs2)
+	case Br, BrIf:
+		writer.writeVarU32(instr.Args.(uint32))
+	case BrTable:
+		args := instr.Args.(BrTableArgs)
+		writer.writeVec(args.Labels)
+		writer.writeVarU32(args.Default)
+	case Call:
+		writer.writeVarU32(instr.Args.(uint32))
+	case CallIndirect:
+		writer.writeVarU32(instr.Args.(uint32))
+		writer.writeByte(0)
+	case LocalGet, LocalSet, LocalTee, GlobalGet, GlobalSet:
+		writer.writeVarU32(instr.Args.(uint32))
+	case MemorySize, MemoryGrow:
+		writer.writeByte(0)
+	case I32Const:
+		writer.writeVarS32(instr.Args.(int32))
+	case I64Const:
+		writer.writeVarS64(instr.Args.(int64))
+	case F32Const:
+		writer.writeF32(instr.Args.(float32))
+	case F64Const:
+		writer.writeF64(instr.Args.(float64))
+	default:
+		if memArg, ok := instr.Args.(MemArg); ok {
+			writer.writeVarU32(memArg.Align)
+			writer.writeVarU32(memArg.Offset)
+		}
+	}
 }

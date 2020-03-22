@@ -11,8 +11,8 @@ const (
 	ValTypeF32 ValType = 0x7D // f32
 	ValTypeF64 ValType = 0x7C // f64
 
-	NoVal = 0x40
-
+	NoVal   = 0x40
+	FtTag   = 0x60
 	FuncRef = 0x70
 
 	MutConst byte = 0

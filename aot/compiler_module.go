@@ -245,9 +245,9 @@ func (m *aotModule) writeU64(offset uint64, n uint64) {
 
 // utils
 func b2i(b bool) uint64 { if b { return 1 } else { return 0 } }
-func f32(i uint64) float32 { return math.Float32frombits(uint32(i)) }
-func u32(f float32) uint64 { return uint64(math.Float32bits(f)) }
-func f64(i uint64) float64 { return math.Float64frombits(i) }
-func u64(f float64) uint64 { return math.Float64bits(f) }
+func _f32(i uint64) float32 { return math.Float32frombits(uint32(i)) }
+func _u32(f float32) uint64 { return uint64(math.Float32bits(f)) }
+func _f64(i uint64) float64 { return math.Float64frombits(i) }
+func _u64(f float64) uint64 { return math.Float64bits(f) }
 `)
 }

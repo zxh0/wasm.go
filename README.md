@@ -13,7 +13,7 @@ An experimental [Wasm](https://webassembly.org/) implementation written in Go.
 * **binary**
   * **types** Go structs translated from Wasm binary format (as simple and direct as possible)
   * **decoder** Wasm binary format decoder
-  * **encoder (WIP)** Wasm binary format encoder
+  * **encoder** Wasm binary format encoder
 * **validator** Wasm binary format validator
 * **interpreter** Wasm interpreter 
 * **text (WIP)** WAT & WAST compiler powered by [ANTLR](https://www.antlr.org/)

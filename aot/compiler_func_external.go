@@ -34,9 +34,9 @@ func (c *externalFuncCompiler) genFuncBody(idx int, ft binary.FuncType) {
 		case binary.ValTypeI64:
 			c.printf("int64(s%d)", i)
 		case binary.ValTypeF32:
-			c.printf("f32(s%d)", i)
+			c.printf("_f32(s%d)", i)
 		case binary.ValTypeF64:
-			c.printf("f64(s%d)", i)
+			c.printf("_f64(s%d)", i)
 		}
 	}
 	c.println(")")
@@ -48,9 +48,9 @@ func (c *externalFuncCompiler) genFuncBody(idx int, ft binary.FuncType) {
 		case binary.ValTypeI64:
 			c.println("return uint64(r.(int64))")
 		case binary.ValTypeF32:
-			c.println("return u32(r.(float32))")
+			c.println("return _u32(r.(float32))")
 		case binary.ValTypeF64:
-			c.println("return u64(r.(float64))")
+			c.println("return _u64(r.(float64))")
 		}
 	}
 }
