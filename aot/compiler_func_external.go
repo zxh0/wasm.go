@@ -30,13 +30,13 @@ func (c *externalFuncCompiler) genFuncBody(idx int, ft binary.FuncType) {
 		c.printIf(i > 0, ", ", "")
 		switch vt {
 		case binary.ValTypeI32:
-			c.printf("int32(l%d)", i)
+			c.printf("int32(s%d)", i)
 		case binary.ValTypeI64:
-			c.printf("int64(l%d)", i)
+			c.printf("int64(s%d)", i)
 		case binary.ValTypeF32:
-			c.printf("f32(l%d)", i)
+			c.printf("f32(s%d)", i)
 		case binary.ValTypeF64:
-			c.printf("f64(l%d)", i)
+			c.printf("f64(s%d)", i)
 		}
 	}
 	c.println(")")

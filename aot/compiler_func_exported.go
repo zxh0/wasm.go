@@ -26,13 +26,13 @@ func (c *exportedFuncCompiler) compile(expIdx, fIdx int, ft binary.FuncType) str
 			c.printIf(i > 0, ", ", "")
 			switch vt {
 			case binary.ValTypeI32:
-				c.print("uint64(args[%d].(int32))")
+				c.printf("uint64(args[%d].(int32))", i)
 			case binary.ValTypeI64:
-				c.print("uint64(args[%d].(int64))")
+				c.printf("uint64(args[%d].(int64))", i)
 			case binary.ValTypeF32:
-				c.print("u32(args[%d].(float32))")
+				c.printf("u32(args[%d].(float32))", i)
 			case binary.ValTypeF64:
-				c.print("u64(args[%d].(float64))")
+				c.printf("u64(args[%d].(float64))", i)
 			}
 		}
 		c.println(")")

@@ -26,12 +26,12 @@ func Validate(module binary.Module) (err error) {
 			}
 		}
 	}()
-	validate(module)
+	v := &moduleValidator{module: module}
+	v.validate()
 	return
 }
 
-func validate(module binary.Module) {
-	v := &moduleValidator{module: module}
+func (v *moduleValidator) validate() {
 	v.validateTypeSec()
 	v.validateImportSec()
 	v.validateFuncSec()

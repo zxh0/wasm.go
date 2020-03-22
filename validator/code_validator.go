@@ -30,8 +30,8 @@ const (
 )
 
 type valType = byte
-type opdStack []valType
-type ctrlStack []ctrlFrame
+type opdStack = []valType
+type ctrlStack = []ctrlFrame
 type ctrlFrame struct {
 	labelTypes  []valType
 	endTypes    []valType
@@ -40,8 +40,8 @@ type ctrlFrame struct {
 }
 
 /*
-  var opds : opd_stack
-  var ctrls : ctrl_stack
+var opds : opd_stack
+var ctrls : ctrl_stack
 */
 type codeValidator struct {
 	opds       opdStack
@@ -87,7 +87,7 @@ func (cv *codeValidator) getInstrPath() string {
 
 /*
 func push_opd(type : val_type | Unknown) =
-	opds.push(type)
+  opds.push(type)
 */
 func (cv *codeValidator) pushOpd(vt valType) {
 	cv.opds = append(cv.opds, vt)
@@ -98,9 +98,9 @@ func (cv *codeValidator) pushOpd(vt valType) {
 
 /*
 func pop_opd() : val_type | Unknown =
-	if (opds.size() = ctrls[0].height && ctrls[0].unreachable) return Unknown
-	error_if(opds.size() = ctrls[0].height)
-	return opds.pop()
+  if (opds.size() = ctrls[0].height && ctrls[0].unreachable) return Unknown
+  error_if(opds.size() = ctrls[0].height)
+  return opds.pop()
 */
 func (cv *codeValidator) popOpd() valType {
 	if ctrl0 := cv.getCtrl(0); len(cv.opds) == ctrl0.height {
@@ -116,11 +116,11 @@ func (cv *codeValidator) popOpd() valType {
 
 /*
 func pop_opd(expect : val_type | Unknown) : val_type | Unknown =
-	let actual = pop_opd()
-	if (actual = Unknown) return expect
-	if (expect = Unknown) return actual
-	error_if(actual =/= expect)
-	return actual
+  let actual = pop_opd()
+  if (actual = Unknown) return expect
+  if (expect = Unknown) return actual
+  error_if(actual =/= expect)
+  return actual
 */
 func (cv *codeValidator) popOpdOf(expect valType) valType {
 	actual := cv.popOpd()
@@ -146,7 +146,6 @@ func (cv *codeValidator) pushOpds(types []valType) {
 	}
 }
 func (cv *codeValidator) popOpds(types []valType) {
-	// TODO
 	for i := len(types) - 1; i >= 0; i-- {
 		cv.popOpdOf(types[i])
 	}
@@ -173,8 +172,8 @@ func (cv *codeValidator) getCtrl(n int) ctrlFrame {
 
 /*
 func push_ctrl(label : list(val_type), out : list(val_type)) =
-	let frame = ctrl_frame(label, out, opds.size(), false)
-	ctrls.push(frame)
+  let frame = ctrl_frame(label, out, opds.size(), false)
+  ctrls.push(frame)
 */
 func (cv *codeValidator) pushCtrl(label, out []valType) {
 	frame := ctrlFrame{label, out, len(cv.opds), false}
@@ -183,12 +182,12 @@ func (cv *codeValidator) pushCtrl(label, out []valType) {
 
 /*
 func pop_ctrl() : list(val_type) =
-	error_if(ctrls.is_empty())
-	let frame = ctrls[0]
-	pop_opds(frame.end_types)
-	error_if(opds.size() =/= frame.height)
-	ctrls.pop()
-	return frame.end_types
+  error_if(ctrls.is_empty())
+  let frame = ctrls[0]
+  pop_opds(frame.end_types)
+  error_if(opds.size() =/= frame.height)
+  ctrls.pop()
+  return frame.end_types
 */
 func (cv *codeValidator) popCtrl() []valType {
 	if len(cv.ctrls) == 0 {
@@ -205,8 +204,8 @@ func (cv *codeValidator) popCtrl() []valType {
 
 /*
 func unreachable() =
-	opds.resize(ctrls[0].height)
-	ctrls[0].unreachable := true
+  opds.resize(ctrls[0].height)
+  ctrls[0].unreachable := true
 */
 func (cv *codeValidator) unreachable() {
 	cv.opds = cv.opds[:cv.getCtrl(0).height]
@@ -241,6 +240,51 @@ func (cv *codeValidator) validateExpr(expr []binary.Instruction) {
 	delete(cv.instrPath, depth)
 }
 
+/*
+func validate(opcode) = switch (opcode)
+  case (i32.add)
+    pop_opd(I32)
+    pop_opd(I32)
+    push_opd(I32)
+  case (drop)
+    pop_opd()
+  case (select)
+    pop_opd(I32)
+    let t1 = pop_opd()
+    let t2 = pop_opd(t1)
+    push_opd(t2)
+  case (unreachable)
+    unreachable()
+  case (block t*)
+    push_ctrl([t*], [t*])
+  case (loop t*)
+    push_ctrl([], [t*])
+  case (if t*)
+    pop_opd(I32)
+    push_ctrl([t*], [t*])
+  case (end)
+    let results = pop_ctrl()
+    push_opds(results)
+  case (else)
+    let results = pop_ctrl()
+    push_ctrl(results, results)
+  case (br n)
+    error_if(ctrls.size() < n)
+    pop_opds(ctrls[n].label_types)
+    unreachable()
+  case (br_if n)
+    error_if(ctrls.size() < n)
+    pop_opd(I32)
+    pop_opds(ctrls[n].label_types)
+    push_opds(ctrls[n].label_types)
+  case (br_table n* m)
+    error_if(ctrls.size() < m)
+    foreach (n in n*)
+      error_if(ctrls.size() < n || ctrls[n].label_types =/= ctrls[m].label_types)
+    pop_opd(I32)
+    pop_opds(ctrls[m].label_types)
+    unreachable()
+*/
 func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 	switch instr.Opcode {
 	case binary.Unreachable:
