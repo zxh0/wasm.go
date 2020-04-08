@@ -77,7 +77,7 @@ func call(vm *vm, args interface{}) {
 }
 
 func callFunc(vm *vm, f vmFunc) {
-	if f.imported != nil {
+	if f.goFunc != nil {
 		callExternalFunc(vm, f)
 	} else {
 		callInternalFunc(vm, f)
@@ -86,7 +86,7 @@ func callFunc(vm *vm, f vmFunc) {
 
 func callExternalFunc(vm *vm, f vmFunc) {
 	args := popArgs(vm, f._type)
-	result, err := f.imported.Call(args...)
+	result, err := f.goFunc.Call(args...)
 	if err != nil {
 		panic(err)
 	}
@@ -167,7 +167,7 @@ func callIndirect(vm *vm, args interface{}) {
 
 	// optimize internal func call
 	if _f, ok := f.(vmFunc); ok {
-		if _f.imported == nil && _f.vm == vm {
+		if _f.goFunc == nil && _f.vm == vm {
 			callInternalFunc(vm, _f)
 			return
 		}

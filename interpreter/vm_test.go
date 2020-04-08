@@ -35,9 +35,9 @@ func TestLocalVar(t *testing.T) {
 	stack.pushU32(3)
 	stack.pushU32(5)
 
-	require.Equal(t, uint64(3), stack.getLocal(1))
-	stack.setLocal(1, 7)
-	require.Equal(t, uint64(7), stack.getLocal(1))
+	require.Equal(t, uint64(3), stack.getOperand(1))
+	stack.setOperand(1, 7)
+	require.Equal(t, uint64(7), stack.getOperand(1))
 }
 
 func TestBlockStack(t *testing.T) {

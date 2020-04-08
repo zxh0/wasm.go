@@ -7,7 +7,7 @@ import (
 )
 
 func TestReads(t *testing.T) {
-	reader := WasmReader{data: []byte{
+	reader := wasmReader{data: []byte{
 		0x01,
 		0x02, 0x03, 0x04, 0x05,
 		0x00, 0x00, 0xc0, 0x3f,

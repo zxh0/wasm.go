@@ -13,10 +13,10 @@ func (s *operandStack) stackSize() int {
 	return len(s.slots)
 }
 
-func (s *operandStack) getLocal(idx uint32) uint64 {
+func (s *operandStack) getOperand(idx uint32) uint64 {
 	return s.slots[idx]
 }
-func (s *operandStack) setLocal(idx uint32, val uint64) {
+func (s *operandStack) setOperand(idx uint32, val uint64) {
 	s.slots[idx] = val
 }
 

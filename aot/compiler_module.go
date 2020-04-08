@@ -98,7 +98,7 @@ func Instantiate(iMap instance.Map) (instance.Instance, error) {
 	}
 	for i, g := range c.module.GlobalSec {
 		c.printf("	m.globals[%d] = interpreter.NewGlobal(%d, %t, %d)\n",
-			len(c.importedGlobals)+i, g.Type.ValType, g.Type.Mut == 1, getConstVal(g.Expr))
+			len(c.importedGlobals)+i, g.Type.ValType, g.Type.Mut == 1, getConstVal(g.Init))
 	}
 
 	c.println("	m.initMem()")

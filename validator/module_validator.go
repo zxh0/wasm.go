@@ -112,7 +112,7 @@ func (v *moduleValidator) validateMemSec() {
 }
 func (v *moduleValidator) validateGlobalSec() {
 	for i, g := range v.module.GlobalSec {
-		if err := v.validateConstExpr(g.Expr, g.Type.ValType); err != "" {
+		if err := v.validateConstExpr(g.Init, g.Type.ValType); err != "" {
 			panic(fmt.Errorf("global[%d]: %s",
 				i+v.getImportedGlobalCount(), err))
 		}

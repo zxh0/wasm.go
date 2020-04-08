@@ -73,8 +73,8 @@ type Module struct {
 //type DataSec   = []Data
 
 type CustomSec struct {
-	Name string
-	// TODO
+	Name  string
+	Bytes []byte // TODO
 }
 
 type Import struct {
@@ -92,7 +92,7 @@ type ImportDesc struct {
 
 type Global struct {
 	Type GlobalType
-	Expr Expr
+	Init Expr
 }
 
 type Export struct {

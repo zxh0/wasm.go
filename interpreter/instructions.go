@@ -4,10 +4,9 @@ import "github.com/zxh0/wasm.go/binary"
 
 type instrFn = func(vm *vm, args interface{})
 
-var instrTable []instrFn
+var instrTable = make([]instrFn, 256)
 
 func init() {
-	instrTable = make([]instrFn, 256)
 	instrTable[binary.Unreachable] = unreachable
 	instrTable[binary.Nop] = nop
 	instrTable[binary.Block] = block

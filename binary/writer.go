@@ -6,57 +6,57 @@ import (
 	"reflect"
 )
 
-type WasmWriter struct {
+type wasmWriter struct {
 	buf []byte
 }
 
 func Encode(module Module) []byte {
-	writer := &WasmWriter{}
+	writer := &wasmWriter{}
 	writer.writeModule(module)
 	return writer.buf
 }
 
-func (writer *WasmWriter) writeByte(b byte) {
+func (writer *wasmWriter) writeByte(b byte) {
 	writer.buf = append(writer.buf, b)
 }
-func (writer *WasmWriter) writeU32(n uint32) {
+func (writer *wasmWriter) writeU32(n uint32) {
 	writer.buf = append(writer.buf, 0, 0, 0, 0)
 	binary.LittleEndian.PutUint32(writer.buf[len(writer.buf)-4:], n)
 }
-func (writer *WasmWriter) writeF32(f float32) {
+func (writer *wasmWriter) writeF32(f float32) {
 	writer.writeU32(math.Float32bits(f))
 }
-func (writer *WasmWriter) writeF64(f float64) {
+func (writer *wasmWriter) writeF64(f float64) {
 	writer.buf = append(writer.buf, 0, 0, 0, 0, 0, 0, 0, 0)
 	n := math.Float64bits(f)
 	binary.LittleEndian.PutUint64(writer.buf[len(writer.buf)-8:], n)
 }
 
-func (writer *WasmWriter) writeLen(n int) {
+func (writer *wasmWriter) writeLen(n int) {
 	writer.writeVarU32(uint32(n))
 }
-func (writer *WasmWriter) writeVarU32(n uint32) {
+func (writer *wasmWriter) writeVarU32(n uint32) {
 	data := encodeVarUint(uint64(n), 32)
 	writer.buf = append(writer.buf, data...)
 }
-func (writer *WasmWriter) writeVarS32(n int32) {
+func (writer *wasmWriter) writeVarS32(n int32) {
 	data := encodeVarInt(int64(n), 32)
 	writer.buf = append(writer.buf, data...)
 }
-func (writer *WasmWriter) writeVarS64(n int64) {
+func (writer *wasmWriter) writeVarS64(n int64) {
 	data := encodeVarInt(n, 64)
 	writer.buf = append(writer.buf, data...)
 }
 
-func (writer *WasmWriter) writeBytes(data []byte) {
+func (writer *wasmWriter) writeBytes(data []byte) {
 	writer.writeLen(len(data))
 	writer.buf = append(writer.buf, data...)
 }
-func (writer *WasmWriter) writeName(name string) {
+func (writer *wasmWriter) writeName(name string) {
 	writer.writeBytes([]byte(name))
 }
 
-func (writer *WasmWriter) writeModule(module Module) []byte {
+func (writer *wasmWriter) writeModule(module Module) []byte {
 	writer.writeU32(MagicNumber)
 	writer.writeU32(Version)
 	writer.writeSec(1, module.TypeSec)
@@ -77,17 +77,17 @@ func (writer *WasmWriter) writeModule(module Module) []byte {
 	return writer.buf
 }
 
-func (writer *WasmWriter) writeSec(id byte, vec interface{}) {
+func (writer *wasmWriter) writeSec(id byte, vec interface{}) {
 	val := reflect.ValueOf(vec)
 	if val.Len() > 0 {
 		writer.writeByte(id)
-		secWriter := &WasmWriter{}
+		secWriter := &wasmWriter{}
 		secWriter.writeVec(vec)
 		writer.writeBytes(secWriter.buf)
 	}
 }
 
-func (writer *WasmWriter) writeVec(vec interface{}) {
+func (writer *wasmWriter) writeVec(vec interface{}) {
 	val := reflect.ValueOf(vec)
 	writer.writeLen(val.Len())
 	for i := 0; i < val.Len(); i++ {
@@ -95,7 +95,7 @@ func (writer *WasmWriter) writeVec(vec interface{}) {
 	}
 }
 
-func (writer *WasmWriter) writeScala(val interface{}) {
+func (writer *wasmWriter) writeScala(val interface{}) {
 	switch x := val.(type) {
 	case Import:
 		writer.writeImport(x)
@@ -124,7 +124,7 @@ func (writer *WasmWriter) writeScala(val interface{}) {
 	}
 }
 
-func (writer *WasmWriter) writeImport(imp Import) {
+func (writer *wasmWriter) writeImport(imp Import) {
 	writer.writeName(imp.Module)
 	writer.writeName(imp.Name)
 	writer.writeByte(imp.Desc.Tag)
@@ -139,22 +139,22 @@ func (writer *WasmWriter) writeImport(imp Import) {
 		writer.writeGlobalType(imp.Desc.Global)
 	}
 }
-func (writer *WasmWriter) writeGlobal(global Global) {
+func (writer *wasmWriter) writeGlobal(global Global) {
 	writer.writeGlobalType(global.Type)
-	writer.writeExpr(global.Expr)
+	writer.writeExpr(global.Init)
 }
-func (writer *WasmWriter) writeExport(export Export) {
+func (writer *wasmWriter) writeExport(export Export) {
 	writer.writeName(export.Name)
 	writer.writeByte(export.Desc.Tag)
 	writer.writeVarU32(export.Desc.Idx)
 }
-func (writer *WasmWriter) writeElem(elem Elem) {
+func (writer *wasmWriter) writeElem(elem Elem) {
 	writer.writeVarU32(elem.Table)
 	writer.writeExpr(elem.Offset)
 	writer.writeVec(elem.Init)
 }
-func (writer *WasmWriter) writeCode(code Code) {
-	codeWriter := &WasmWriter{}
+func (writer *wasmWriter) writeCode(code Code) {
+	codeWriter := &wasmWriter{}
 	codeWriter.writeLen(len(code.Locals))
 	for _, locals := range code.Locals {
 		codeWriter.writeVarU32(locals.N)
@@ -163,34 +163,34 @@ func (writer *WasmWriter) writeCode(code Code) {
 	codeWriter.writeExpr(code.Expr)
 	writer.writeBytes(codeWriter.buf)
 }
-func (writer *WasmWriter) writeData(data Data) {
+func (writer *wasmWriter) writeData(data Data) {
 	writer.writeVarU32(data.Mem)
 	writer.writeExpr(data.Offset)
 	writer.writeBytes(data.Init)
 }
 
 // types
-func (writer *WasmWriter) writeBlockType(bt BlockType) {
+func (writer *wasmWriter) writeBlockType(bt BlockType) {
 	if len(bt) == 0 {
 		writer.writeByte(NoVal)
 	} else {
 		writer.writeByte(bt[0])
 	}
 }
-func (writer *WasmWriter) writeFuncType(ft FuncType) {
+func (writer *wasmWriter) writeFuncType(ft FuncType) {
 	writer.writeByte(FtTag)
 	writer.writeVec(ft.ParamTypes)
 	writer.writeVec(ft.ResultTypes)
 }
-func (writer *WasmWriter) writeTableType(tt TableType) {
+func (writer *wasmWriter) writeTableType(tt TableType) {
 	writer.writeByte(tt.ElemType)
 	writer.writeLimits(tt.Limits)
 }
-func (writer *WasmWriter) writeGlobalType(gt GlobalType) {
+func (writer *wasmWriter) writeGlobalType(gt GlobalType) {
 	writer.writeByte(gt.ValType)
 	writer.writeByte(gt.Mut)
 }
-func (writer *WasmWriter) writeLimits(limits Limits) {
+func (writer *wasmWriter) writeLimits(limits Limits) {
 	writer.writeByte(limits.Tag)
 	writer.writeVarU32(limits.Min)
 	if limits.Tag == 1 {
@@ -198,14 +198,14 @@ func (writer *WasmWriter) writeLimits(limits Limits) {
 	}
 }
 
-func (writer *WasmWriter) writeExpr(expr Expr) {
+func (writer *wasmWriter) writeExpr(expr Expr) {
 	for _, instr := range expr {
 		writer.writeInstr(instr)
 	}
 	writer.writeByte(_End)
 }
 
-func (writer *WasmWriter) writeInstr(instr Instruction) {
+func (writer *wasmWriter) writeInstr(instr Instruction) {
 	writer.writeByte(instr.Opcode)
 	switch instr.Opcode {
 	case Block, Loop:

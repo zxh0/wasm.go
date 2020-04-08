@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-type WasmReader struct {
+type wasmReader struct {
 	data []byte
 }
 
@@ -33,17 +33,17 @@ func Decode(data []byte) (module Module, err error) {
 			}
 		}
 	}()
-	reader := &WasmReader{data: data}
+	reader := &wasmReader{data: data}
 	reader.readModule(&module)
 	return
 }
 
-func (reader *WasmReader) remaining() int {
+func (reader *wasmReader) remaining() int {
 	return len(reader.data)
 }
 
 // fixed length value
-func (reader *WasmReader) readByte() byte {
+func (reader *wasmReader) readByte() byte {
 	if len(reader.data) < 1 {
 		panic(errUnexpectedEnd)
 	}
@@ -51,7 +51,7 @@ func (reader *WasmReader) readByte() byte {
 	reader.data = reader.data[1:]
 	return b
 }
-func (reader *WasmReader) readU32() uint32 {
+func (reader *wasmReader) readU32() uint32 {
 	if len(reader.data) < 4 {
 		panic(errUnexpectedEnd)
 	}
@@ -59,7 +59,7 @@ func (reader *WasmReader) readU32() uint32 {
 	reader.data = reader.data[4:]
 	return n
 }
-func (reader *WasmReader) readF32() float32 {
+func (reader *wasmReader) readF32() float32 {
 	if len(reader.data) < 4 {
 		panic(errUnexpectedEnd)
 	}
@@ -67,7 +67,7 @@ func (reader *WasmReader) readF32() float32 {
 	reader.data = reader.data[4:]
 	return math.Float32frombits(n)
 }
-func (reader *WasmReader) readF64() float64 {
+func (reader *wasmReader) readF64() float64 {
 	if len(reader.data) < 8 {
 		panic(errUnexpectedEnd)
 	}
@@ -77,24 +77,24 @@ func (reader *WasmReader) readF64() float64 {
 }
 
 // variable length value
-func (reader *WasmReader) readVarU32() uint32 {
+func (reader *wasmReader) readVarU32() uint32 {
 	n, w := decodeVarUint(reader.data, 32)
 	reader.data = reader.data[w:]
 	return uint32(n)
 }
-func (reader *WasmReader) readVarS32() int32 {
+func (reader *wasmReader) readVarS32() int32 {
 	n, w := decodeVarInt(reader.data, 32)
 	reader.data = reader.data[w:]
 	return int32(n)
 }
-func (reader *WasmReader) readVarS64() int64 {
+func (reader *wasmReader) readVarS64() int64 {
 	n, w := decodeVarInt(reader.data, 64)
 	reader.data = reader.data[w:]
 	return n
 }
 
 // bytes & name
-func (reader *WasmReader) readBytes() []byte {
+func (reader *wasmReader) readBytes() []byte {
 	n := reader.readVarU32()
 	if len(reader.data) < int(n) {
 		panic(errUnexpectedEnd)
@@ -103,16 +103,16 @@ func (reader *WasmReader) readBytes() []byte {
 	reader.data = reader.data[n:]
 	return bytes
 }
-func (reader *WasmReader) readName() string {
+func (reader *wasmReader) readName() string {
 	data := reader.readBytes()
 	if !utf8.Valid(data) {
-		panic(errors.New("invalid UTF-8 encoding"))
+		panic(errors.New("malformed UTF-8 encoding"))
 	}
 	return string(data)
 }
 
 // module
-func (reader *WasmReader) readModule(module *Module) {
+func (reader *wasmReader) readModule(module *Module) {
 	if reader.remaining() < 4 {
 		panic(errors.New("unexpected end of magic header"))
 	}
@@ -139,18 +139,17 @@ func (reader *WasmReader) readModule(module *Module) {
 }
 
 // sections
-func (reader *WasmReader) readSections(module *Module) {
+func (reader *wasmReader) readSections(module *Module) {
 	prevSecID := byte(0)
 	for reader.remaining() > 0 {
 		secID := reader.readByte()
 		if secID == SecCustomID {
-			module.CustomSecs = append(module.CustomSecs,
-				reader.readCustomSec(module))
+			module.CustomSecs = append(module.CustomSecs, reader.readCustomSec())
 			continue
 		}
 
 		if secID > SecDataID {
-			panic(fmt.Errorf("invalid section id: %d", secID))
+			panic(fmt.Errorf("malformed section id: %d", secID))
 		}
 		if secID <= prevSecID {
 			panic(fmt.Errorf("junk after last section, id: %d", secID))
@@ -165,13 +164,14 @@ func (reader *WasmReader) readSections(module *Module) {
 		}
 	}
 }
-func (reader *WasmReader) readCustomSec(module *Module) CustomSec {
-	secReader := &WasmReader{data: reader.readBytes()}
-	name := secReader.readName()
-	// TODO
-	return CustomSec{Name: name}
+func (reader *wasmReader) readCustomSec() CustomSec {
+	secReader := &wasmReader{data: reader.readBytes()}
+	return CustomSec{
+		Name:  secReader.readName(),
+		Bytes: secReader.data, // TODO
+	}
 }
-func (reader *WasmReader) readNonCustomSec(secID byte, module *Module) {
+func (reader *wasmReader) readNonCustomSec(secID byte, module *Module) {
 	switch secID {
 	case SecTypeID:
 		module.TypeSec = reader.readTypeSec()
@@ -196,11 +196,10 @@ func (reader *WasmReader) readNonCustomSec(secID byte, module *Module) {
 	case SecDataID:
 		module.DataSec = reader.readDataSec()
 	}
-	return
 }
 
 // type sec
-func (reader *WasmReader) readTypeSec() []FuncType {
+func (reader *wasmReader) readTypeSec() []FuncType {
 	vec := make([]FuncType, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readFuncType()
@@ -209,21 +208,21 @@ func (reader *WasmReader) readTypeSec() []FuncType {
 }
 
 // import sec
-func (reader *WasmReader) readImportSec() []Import {
+func (reader *wasmReader) readImportSec() []Import {
 	vec := make([]Import, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readImport()
 	}
 	return vec
 }
-func (reader *WasmReader) readImport() Import {
+func (reader *wasmReader) readImport() Import {
 	return Import{
 		Module: reader.readName(),
 		Name:   reader.readName(),
 		Desc:   reader.readImportDesc(),
 	}
 }
-func (reader *WasmReader) readImportDesc() ImportDesc {
+func (reader *wasmReader) readImportDesc() ImportDesc {
 	desc := ImportDesc{Tag: reader.readByte()}
 	switch desc.Tag {
 	case ImportTagFunc:
@@ -241,7 +240,7 @@ func (reader *WasmReader) readImportDesc() ImportDesc {
 }
 
 // table sec
-func (reader *WasmReader) readTableSec() []TableType {
+func (reader *wasmReader) readTableSec() []TableType {
 	vec := make([]TableType, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readTableType()
@@ -250,7 +249,7 @@ func (reader *WasmReader) readTableSec() []TableType {
 }
 
 // mem sec
-func (reader *WasmReader) readMemSec() []MemType {
+func (reader *wasmReader) readMemSec() []MemType {
 	vec := make([]MemType, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readLimits()
@@ -259,32 +258,32 @@ func (reader *WasmReader) readMemSec() []MemType {
 }
 
 // global sec
-func (reader *WasmReader) readGlobalSec() []Global {
+func (reader *wasmReader) readGlobalSec() []Global {
 	vec := make([]Global, reader.readVarU32())
 	for i := range vec {
 		vec[i] = Global{
 			Type: reader.readGlobalType(),
-			Expr: reader.readExpr(),
+			Init: reader.readExpr(),
 		}
 	}
 	return vec
 }
 
 // export sec
-func (reader *WasmReader) readExportSec() []Export {
+func (reader *wasmReader) readExportSec() []Export {
 	vec := make([]Export, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readExport()
 	}
 	return vec
 }
-func (reader *WasmReader) readExport() Export {
+func (reader *wasmReader) readExport() Export {
 	return Export{
 		Name: reader.readName(),
 		Desc: reader.readExportDesc(),
 	}
 }
-func (reader *WasmReader) readExportDesc() ExportDesc {
+func (reader *wasmReader) readExportDesc() ExportDesc {
 	desc := ExportDesc{
 		Tag: reader.readByte(),
 		Idx: reader.readVarU32(),
@@ -301,20 +300,20 @@ func (reader *WasmReader) readExportDesc() ExportDesc {
 }
 
 // start sec
-func (reader *WasmReader) readStartSec() *uint32 {
+func (reader *wasmReader) readStartSec() *uint32 {
 	idx := reader.readVarU32()
 	return &idx
 }
 
 // elem sec
-func (reader *WasmReader) readElemSec() []Elem {
+func (reader *wasmReader) readElemSec() []Elem {
 	vec := make([]Elem, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readElem()
 	}
 	return vec
 }
-func (reader *WasmReader) readElem() Elem {
+func (reader *wasmReader) readElem() Elem {
 	return Elem{
 		Table:  reader.readVarU32(),
 		Offset: reader.readExpr(),
@@ -323,14 +322,14 @@ func (reader *WasmReader) readElem() Elem {
 }
 
 // code sec
-func (reader *WasmReader) readCodeSec() []Code {
+func (reader *wasmReader) readCodeSec() []Code {
 	vec := make([]Code, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readCode(i)
 	}
 	return vec
 }
-func (reader *WasmReader) readCode(idx int) Code {
+func (reader *wasmReader) readCode(idx int) Code {
 	n := reader.readVarU32()
 	remainingBeforeRead := reader.remaining()
 	code := Code{
@@ -346,14 +345,14 @@ func (reader *WasmReader) readCode(idx int) Code {
 	}
 	return code
 }
-func (reader *WasmReader) readLocalsVec() []Locals {
+func (reader *wasmReader) readLocalsVec() []Locals {
 	vec := make([]Locals, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readLocals()
 	}
 	return vec
 }
-func (reader *WasmReader) readLocals() Locals {
+func (reader *wasmReader) readLocals() Locals {
 	return Locals{
 		N:    reader.readVarU32(),
 		Type: reader.readValType(),
@@ -361,14 +360,14 @@ func (reader *WasmReader) readLocals() Locals {
 }
 
 // data sec
-func (reader *WasmReader) readDataSec() []Data {
+func (reader *wasmReader) readDataSec() []Data {
 	vec := make([]Data, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readData()
 	}
 	return vec
 }
-func (reader *WasmReader) readData() (data Data) {
+func (reader *wasmReader) readData() (data Data) {
 	return Data{
 		Mem:    reader.readVarU32(),
 		Offset: reader.readExpr(),
@@ -377,14 +376,14 @@ func (reader *WasmReader) readData() (data Data) {
 }
 
 // value types
-func (reader *WasmReader) readValTypes() []ValType {
+func (reader *wasmReader) readValTypes() []ValType {
 	vec := make([]ValType, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readValType()
 	}
 	return vec
 }
-func (reader *WasmReader) readValType() ValType {
+func (reader *wasmReader) readValType() ValType {
 	vt := reader.readByte()
 	checkValType(vt)
 	return vt
@@ -396,12 +395,12 @@ func checkValType(vt byte) {
 	case ValTypeF32:
 	case ValTypeF64:
 	default:
-		panic(fmt.Errorf("invalid value type: %d", vt))
+		panic(fmt.Errorf("malformed value type: %d", vt))
 	}
 }
 
 // entity types
-func (reader *WasmReader) readBlockType() []ValType {
+func (reader *wasmReader) readBlockType() []ValType {
 	if b := reader.readByte(); b == NoVal {
 		return nil
 	} else {
@@ -409,7 +408,7 @@ func (reader *WasmReader) readBlockType() []ValType {
 		return []ValType{b}
 	}
 }
-func (reader *WasmReader) readFuncType() FuncType {
+func (reader *wasmReader) readFuncType() FuncType {
 	ft := FuncType{
 		Tag:         reader.readByte(),
 		ParamTypes:  reader.readValTypes(),
@@ -420,7 +419,7 @@ func (reader *WasmReader) readFuncType() FuncType {
 	}
 	return ft
 }
-func (reader *WasmReader) readTableType() TableType {
+func (reader *wasmReader) readTableType() TableType {
 	tt := TableType{
 		ElemType: reader.readByte(),
 		Limits:   reader.readLimits(),
@@ -430,7 +429,7 @@ func (reader *WasmReader) readTableType() TableType {
 	}
 	return tt
 }
-func (reader *WasmReader) readGlobalType() GlobalType {
+func (reader *wasmReader) readGlobalType() GlobalType {
 	gt := GlobalType{
 		ValType: reader.readValType(),
 		Mut:     reader.readByte(),
@@ -439,11 +438,11 @@ func (reader *WasmReader) readGlobalType() GlobalType {
 	case MutConst:
 	case MutVar:
 	default:
-		panic(fmt.Errorf("invalid mutability: %d", gt.Mut))
+		panic(fmt.Errorf("malformed mutability: %d", gt.Mut))
 	}
 	return gt
 }
-func (reader *WasmReader) readLimits() Limits {
+func (reader *wasmReader) readLimits() Limits {
 	limits := Limits{
 		Tag: reader.readByte(),
 		Min: reader.readVarU32(),
@@ -455,7 +454,7 @@ func (reader *WasmReader) readLimits() Limits {
 }
 
 // indices
-func (reader *WasmReader) readIndices() []uint32 {
+func (reader *wasmReader) readIndices() []uint32 {
 	vec := make([]uint32, reader.readVarU32())
 	for i := range vec {
 		vec[i] = reader.readVarU32()
@@ -465,7 +464,7 @@ func (reader *WasmReader) readIndices() []uint32 {
 
 // expr & instruction
 
-func (reader *WasmReader) readExpr() Expr {
+func (reader *wasmReader) readExpr() Expr {
 	instrs, end := reader.readInstructions()
 	if end != _End {
 		panic(fmt.Errorf("invalid expr end: %d", end))
@@ -473,7 +472,7 @@ func (reader *WasmReader) readExpr() Expr {
 	return instrs
 }
 
-func (reader *WasmReader) readInstructions() (instrs []Instruction, end byte) {
+func (reader *wasmReader) readInstructions() (instrs []Instruction, end byte) {
 	for {
 		instr := reader.readInstruction()
 		if instr.Opcode == _Else || instr.Opcode == _End {
@@ -484,7 +483,7 @@ func (reader *WasmReader) readInstructions() (instrs []Instruction, end byte) {
 	}
 }
 
-func (reader *WasmReader) readInstruction() (instr Instruction) {
+func (reader *wasmReader) readInstruction() (instr Instruction) {
 	instr.Opcode = reader.readByte()
 	if opnames[instr.Opcode] == "" {
 		panic(fmt.Errorf("undefined opcode: 0x%02x", instr.Opcode))
@@ -493,7 +492,7 @@ func (reader *WasmReader) readInstruction() (instr Instruction) {
 	return
 }
 
-func (reader *WasmReader) readArgs(opcode byte) interface{} {
+func (reader *wasmReader) readArgs(opcode byte) interface{} {
 	switch opcode {
 	case Block, Loop:
 		return reader.readBlockArgs()
@@ -529,7 +528,7 @@ func (reader *WasmReader) readArgs(opcode byte) interface{} {
 	}
 }
 
-func (reader *WasmReader) readBlockArgs() (args BlockArgs) {
+func (reader *wasmReader) readBlockArgs() (args BlockArgs) {
 	var end byte
 	args.RT = reader.readBlockType()
 	args.Instrs, end = reader.readInstructions()
@@ -539,7 +538,7 @@ func (reader *WasmReader) readBlockArgs() (args BlockArgs) {
 	return
 }
 
-func (reader *WasmReader) readIfArgs() (args IfArgs) {
+func (reader *wasmReader) readIfArgs() (args IfArgs) {
 	var end byte
 	args.RT = reader.readBlockType()
 	args.Instrs1, end = reader.readInstructions()
@@ -552,27 +551,27 @@ func (reader *WasmReader) readIfArgs() (args IfArgs) {
 	return
 }
 
-func (reader *WasmReader) readBrTableArgs() BrTableArgs {
+func (reader *wasmReader) readBrTableArgs() BrTableArgs {
 	return BrTableArgs{
 		Labels:  reader.readIndices(),
 		Default: reader.readVarU32(),
 	}
 }
 
-func (reader *WasmReader) readCallIndirectArgs() uint32 {
+func (reader *wasmReader) readCallIndirectArgs() uint32 {
 	typeIdx := reader.readVarU32()
 	reader.readZero()
 	return typeIdx
 }
 
-func (reader *WasmReader) readMemArg() MemArg {
+func (reader *wasmReader) readMemArg() MemArg {
 	return MemArg{
 		Align:  reader.readVarU32(),
 		Offset: reader.readVarU32(),
 	}
 }
 
-func (reader *WasmReader) readZero() byte {
+func (reader *wasmReader) readZero() byte {
 	b := reader.readByte()
 	if b != 0 {
 		panic(fmt.Errorf("zero flag expected, got %d", b))

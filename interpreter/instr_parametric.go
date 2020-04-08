@@ -5,13 +5,13 @@ func drop(vm *vm, _ interface{}) {
 }
 
 func _select(vm *vm, _ interface{}) {
-	c := vm.popU64()
-	b := vm.popU64()
-	a := vm.popU64()
+	v3 := vm.popU64()
+	v2 := vm.popU64()
+	v1 := vm.popU64()
 
-	if c != 0 {
-		vm.pushU64(a)
+	if v3 != 0 {
+		vm.pushU64(v1)
 	} else {
-		vm.pushU64(b)
+		vm.pushU64(v2)
 	}
 }

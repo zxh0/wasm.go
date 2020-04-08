@@ -6,17 +6,17 @@ import (
 )
 
 // const
-func i32Const(vm *vm, n interface{}) {
-	vm.pushS32(n.(int32))
+func i32Const(vm *vm, args interface{}) {
+	vm.pushS32(args.(int32))
 }
-func i64Const(vm *vm, n interface{}) {
-	vm.pushS64(n.(int64))
+func i64Const(vm *vm, args interface{}) {
+	vm.pushS64(args.(int64))
 }
-func f32Const(vm *vm, n interface{}) {
-	vm.pushF32(n.(float32))
+func f32Const(vm *vm, args interface{}) {
+	vm.pushF32(args.(float32))
 }
-func f64Const(vm *vm, n interface{}) {
-	vm.pushF64(n.(float64))
+func f64Const(vm *vm, args interface{}) {
+	vm.pushF64(args.(float64))
 }
 
 // i32 test & rel

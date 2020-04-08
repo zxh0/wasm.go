@@ -173,8 +173,8 @@ func (vm *vm) initMemory(offsets []uint64) {
 func (vm *vm) initGlobals() {
 	for _, g := range vm.module.GlobalSec {
 		initVal := uint64(0)
-		if g.Expr != nil {
-			vm.execConstExpr(g.Expr)
+		if g.Init != nil {
+			vm.execConstExpr(g.Init)
 			initVal = vm.popU64()
 		}
 		g := newGlobal(g.Type, initVal)
@@ -259,7 +259,7 @@ func (vm *vm) safeCallFunc(f vmFunc,
 func (vm *vm) callFunc(f vmFunc, args []interface{}) interface{} {
 	vm.pushArgs(f._type, args)
 	callFunc(vm, f)
-	if f.imported == nil {
+	if f.goFunc == nil {
 		vm.loop()
 	}
 	return vm.popResult(f._type)

@@ -185,7 +185,7 @@ func (b *moduleBuilder) addGlobal(gt binary.GlobalType,
 	expr []binary.Instruction) int {
 
 	b.module.GlobalSec = append(b.module.GlobalSec,
-		binary.Global{Type: gt, Expr: expr})
+		binary.Global{Type: gt, Init: expr})
 	return b.glbNames.imported + len(b.module.GlobalSec) - 1
 }
 
