@@ -18,7 +18,7 @@ An experimental [Wasm](https://webassembly.org/) implementation written in Go.
 * **interpreter** Wasm interpreter 
 * **text (WIP)** WAT & WAST compiler powered by [ANTLR](https://www.antlr.org/)
 * **aot (WIP)** AOT (Wasm binary -> Go plugin) compiler
-* **jit (WIP)** JIT compiler using by LLVM
+* **jit (WIP)** JIT compiler using LLVM
 
 
 
