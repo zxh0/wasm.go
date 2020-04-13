@@ -597,7 +597,7 @@ func i64Extend32S(vm *vm, _ interface{}) {
 }
 
 func truncSat(vm *vm, args interface{}) {
-	switch args.(int) {
+	switch args.(byte) {
 	case 0: // i32.trunc_sat_f32_s
 		v := truncSatS(float64(vm.popF32()), 32)
 		vm.pushS32(int32(v))

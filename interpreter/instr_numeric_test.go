@@ -229,7 +229,7 @@ func TestTruncSat(t *testing.T) {
 	testI64TruncSat(t, 4, float32(9223372036854775808.0), int64(0x7fffffffffffffff))
 }
 
-func testI64TruncSat(t *testing.T, args int, b, c interface{}) {
+func testI64TruncSat(t *testing.T, args byte, b, c interface{}) {
 	vm := &vm{}
 	pushVal(vm, b)
 	truncSat(vm, args)

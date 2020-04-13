@@ -14,19 +14,19 @@ func nop(vm *vm, _ interface{}) {
 
 func block(vm *vm, args interface{}) {
 	blockArgs := args.(binary.BlockArgs)
-	bt := vm.module.GetBlockType(blockArgs.RT)
+	bt := vm.module.GetBlockType(blockArgs.BT)
 	vm.enterBlock(binary.Block, bt, blockArgs.Instrs)
 }
 
 func loop(vm *vm, args interface{}) {
 	blockArgs := args.(binary.BlockArgs)
-	bt := vm.module.GetBlockType(blockArgs.RT)
+	bt := vm.module.GetBlockType(blockArgs.BT)
 	vm.enterBlock(binary.Loop, bt, blockArgs.Instrs)
 }
 
 func _if(vm *vm, args interface{}) {
 	ifArgs := args.(binary.IfArgs)
-	bt := vm.module.GetBlockType(ifArgs.RT)
+	bt := vm.module.GetBlockType(ifArgs.BT)
 	if vm.popBool() {
 		vm.enterBlock(binary.If, bt, ifArgs.Instrs1)
 	} else {

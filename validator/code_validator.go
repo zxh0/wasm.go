@@ -318,14 +318,14 @@ func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 	case binary.Nop:
 	case binary.Block, binary.Loop:
 		blockArgs := instr.Args.(binary.BlockArgs)
-		bt := cv.mv.module.GetBlockType(blockArgs.RT)
+		bt := cv.mv.module.GetBlockType(blockArgs.BT)
 		cv.popOpds(bt.ParamTypes)
 		cv.pushCtrl(instr.Opcode, bt.ParamTypes, bt.ResultTypes)
 		cv.validateExpr(blockArgs.Instrs)
 		cv.pushOpds(cv.popCtrl().endTypes)
 	case binary.If:
 		ifArgs := instr.Args.(binary.IfArgs)
-		bt := cv.mv.module.GetBlockType(ifArgs.RT)
+		bt := cv.mv.module.GetBlockType(ifArgs.BT)
 		cv.popI32()
 		cv.popOpds(bt.ParamTypes)
 		cv.pushCtrl(binary.If, bt.ParamTypes, bt.ResultTypes)
@@ -629,7 +629,7 @@ func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 		cv.popI64()
 		cv.pushI64()
 	case binary.TruncSat:
-		switch instr.Args.(int) {
+		switch instr.Args.(byte) {
 		case 0, 1:
 			cv.popF32()
 			cv.pushI32()

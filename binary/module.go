@@ -131,15 +131,15 @@ func (module Module) GetResultTypes(bt BlockType) []ValType {
 }
 func (module Module) GetBlockType(bt BlockType) FuncType {
 	switch bt {
-	case -1:
+	case BlockTypeI32:
 		return FuncType{ResultTypes: []ValType{ValTypeI32}}
-	case -2:
+	case BlockTypeI64:
 		return FuncType{ResultTypes: []ValType{ValTypeI64}}
-	case -3:
+	case BlockTypeF32:
 		return FuncType{ResultTypes: []ValType{ValTypeF32}}
-	case -4:
+	case BlockTypeF64:
 		return FuncType{ResultTypes: []ValType{ValTypeF64}}
-	case -64:
+	case BlockTypeEmpty:
 		return FuncType{}
 	default:
 		return module.TypeSec[bt]

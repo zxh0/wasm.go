@@ -14,21 +14,21 @@ func newTruncSat(opname string) binary.Instruction {
 	instr := binary.Instruction{Opcode: binary.TruncSat}
 	switch opname {
 	case "i32.trunc_sat_f32_s":
-		instr.Args = 0x00
+		instr.Args = byte(0x00)
 	case "i32.trunc_sat_f32_u":
-		instr.Args = 0x01
+		instr.Args = byte(0x01)
 	case "i32.trunc_sat_f64_s":
-		instr.Args = 0x02
+		instr.Args = byte(0x02)
 	case "i32.trunc_sat_f64_u":
-		instr.Args = 0x03
+		instr.Args = byte(0x03)
 	case "i64.trunc_sat_f32_s":
-		instr.Args = 0x04
+		instr.Args = byte(0x04)
 	case "i64.trunc_sat_f32_u":
-		instr.Args = 0x05
+		instr.Args = byte(0x05)
 	case "i64.trunc_sat_f64_s":
-		instr.Args = 0x06
+		instr.Args = byte(0x06)
 	case "i64.trunc_sat_f64_u":
-		instr.Args = 0x07
+		instr.Args = byte(0x07)
 	default:
 		panic("unreachable")
 	}
@@ -42,19 +42,19 @@ func newI32Const0() binary.Instruction {
 	}
 }
 
-func newBlockInstr(opname string, rt binary.BlockType,
+func newBlockInstr(opname string, bt binary.BlockType,
 	expr1, expr2 []binary.Instruction) binary.Instruction {
 
 	instr := newInstruction(opname)
 	switch instr.Opcode {
 	case binary.Block, binary.Loop:
 		instr.Args = binary.BlockArgs{
-			RT:     rt,
+			BT:     bt,
 			Instrs: expr1,
 		}
 	case binary.If:
 		ifArgs := binary.IfArgs{
-			RT:      rt,
+			BT:      bt,
 			Instrs1: expr1,
 			Instrs2: expr2,
 		}

@@ -206,11 +206,11 @@ func (writer *wasmWriter) writeInstr(instr Instruction) {
 	switch instr.Opcode {
 	case Block, Loop:
 		args := instr.Args.(BlockArgs)
-		writer.writeBlockType(args.RT)
+		writer.writeBlockType(args.BT)
 		writer.writeExpr(args.Instrs)
 	case If:
 		args := instr.Args.(IfArgs)
-		writer.writeBlockType(args.RT)
+		writer.writeBlockType(args.BT)
 		writer.writeExpr(args.Instrs1)
 		writer.buf[len(writer.buf)-1] = Else_
 		writer.writeExpr(args.Instrs2)

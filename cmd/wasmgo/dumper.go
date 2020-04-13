@@ -140,7 +140,7 @@ func (d *dumper) dumpCodeSec() {
 			}
 		}
 		fmt.Println("]")
-		dumpExpr("    ", code.Expr)
+		d.dumpExpr("    ", code.Expr)
 	}
 }
 
@@ -158,18 +158,22 @@ func (d *dumper) dumpCustomSec() {
 	}
 }
 
-func dumpExpr(indentation string, expr binary.Expr) {
+func (d *dumper) dumpExpr(indentation string, expr binary.Expr) {
 	for _, instr := range expr {
 		switch instr.Opcode {
 		case binary.Block, binary.Loop:
-			fmt.Printf("%s%s\n", indentation, instr.GetOpname())
-			dumpExpr(indentation+"  ", instr.Args.(binary.BlockArgs).Instrs)
+			args := instr.Args.(binary.BlockArgs)
+			bt := d.module.GetBlockType(args.BT)
+			fmt.Printf("%s%s %s\n", indentation, instr.GetOpname(), bt)
+			d.dumpExpr(indentation+"  ", args.Instrs)
 			fmt.Printf("%s%s\n", indentation, "end")
 		case binary.If:
-			fmt.Printf("%s%s\n", indentation, "if")
-			dumpExpr(indentation+"  ", instr.Args.(binary.IfArgs).Instrs1)
+			args := instr.Args.(binary.IfArgs)
+			bt := d.module.GetBlockType(args.BT)
+			fmt.Printf("%s%s %s\n", indentation, "if", bt)
+			d.dumpExpr(indentation+"  ", args.Instrs1)
 			fmt.Printf("%s%s\n", indentation, "else")
-			dumpExpr(indentation+"  ", instr.Args.(binary.IfArgs).Instrs2)
+			d.dumpExpr(indentation+"  ", args.Instrs2)
 			fmt.Printf("%s%s\n", indentation, "end")
 		default:
 			if instr.Args != nil {

@@ -9,12 +9,12 @@ type Instruction struct {
 
 // block & loop
 type BlockArgs struct {
-	RT     BlockType
+	BT     BlockType
 	Instrs []Instruction
 }
 
 type IfArgs struct {
-	RT      BlockType
+	BT      BlockType
 	Instrs1 []Instruction
 	Instrs2 []Instruction
 }

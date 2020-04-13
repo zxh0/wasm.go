@@ -519,6 +519,8 @@ func (reader *wasmReader) readArgs(opcode byte) interface{} {
 		return reader.readF32()
 	case F64Const:
 		return reader.readF64()
+	case TruncSat:
+		return reader.readByte()
 	default:
 		if opcode >= I32Load && opcode <= I64Store32 {
 			return reader.readMemArg()
@@ -529,7 +531,7 @@ func (reader *wasmReader) readArgs(opcode byte) interface{} {
 
 func (reader *wasmReader) readBlockArgs() (args BlockArgs) {
 	var end byte
-	args.RT = reader.readBlockType()
+	args.BT = reader.readBlockType()
 	args.Instrs, end = reader.readInstructions()
 	if end != End_ {
 		panic(fmt.Errorf("invalid block end: %d", end))
@@ -539,7 +541,7 @@ func (reader *wasmReader) readBlockArgs() (args BlockArgs) {
 
 func (reader *wasmReader) readIfArgs() (args IfArgs) {
 	var end byte
-	args.RT = reader.readBlockType()
+	args.BT = reader.readBlockType()
 	args.Instrs1, end = reader.readInstructions()
 	if end == Else_ {
 		args.Instrs2, end = reader.readInstructions()

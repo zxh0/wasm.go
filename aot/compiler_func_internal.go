@@ -175,12 +175,12 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 		c.printf("// %s\n", opname)
 	case binary.Block:
 		blockArgs := instr.Args.(binary.BlockArgs)
-		rt := c.moduleInfo.module.GetResultTypes(blockArgs.RT)
-		c.emitBlock(blockArgs.Instrs, false, len(rt) > 0)
+		bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
+		c.emitBlock(blockArgs.Instrs, false, len(bt) > 0)
 	case binary.Loop:
 		blockArgs := instr.Args.(binary.BlockArgs)
-		rt := c.moduleInfo.module.GetResultTypes(blockArgs.RT)
-		c.emitBlock(blockArgs.Instrs, true, len(rt) > 0)
+		bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
+		c.emitBlock(blockArgs.Instrs, true, len(bt) > 0)
 	case binary.If:
 		c.emitIf(instr.Args.(binary.IfArgs))
 	case binary.Br:
@@ -602,8 +602,8 @@ l0: for {
 }
 */
 func (c *internalFuncCompiler) emitLoop(blockArgs binary.BlockArgs) {
-	rt := c.moduleInfo.module.GetResultTypes(blockArgs.RT)
-	c.emitBlock(blockArgs.Instrs, true, len(rt) > 0)
+	bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
+	c.emitBlock(blockArgs.Instrs, true, len(bt) > 0)
 }
 
 /*
@@ -620,7 +620,7 @@ func (c *internalFuncCompiler) emitIf(ifArgs binary.IfArgs) {
 		c.printIndents()
 		c.printf("_l%d: for {\n", c.blockDepth()-1)
 	}
-	rt := c.moduleInfo.module.GetResultTypes(ifArgs.RT)
+	rt := c.moduleInfo.module.GetResultTypes(ifArgs.BT)
 	c.enterBlock(false, len(rt) > 0)
 
 	c.printIndentsPlus(-1)
