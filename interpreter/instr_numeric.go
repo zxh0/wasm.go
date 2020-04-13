@@ -580,6 +580,22 @@ func f64ReinterpretI64(vm *vm, _ interface{}) {
 	//vm.pushF64(math.Float64frombits(vm.popU64()))
 }
 
+func i32Extend8S(vm *vm, _ interface{}) {
+	vm.pushS32(int32(int8(vm.popS32())))
+}
+func i32Extend16S(vm *vm, _ interface{}) {
+	vm.pushS32(int32(int16(vm.popS32())))
+}
+func i64Extend8S(vm *vm, _ interface{}) {
+	vm.pushS64(int64(int8(vm.popS64())))
+}
+func i64Extend16S(vm *vm, _ interface{}) {
+	vm.pushS64(int64(int16(vm.popS64())))
+}
+func i64Extend32S(vm *vm, _ interface{}) {
+	vm.pushS64(int64(int32(vm.popS64())))
+}
+
 func truncSat(vm *vm, args interface{}) {
 	switch args.(int) {
 	case 0: // i32.trunc_sat_f32_s
