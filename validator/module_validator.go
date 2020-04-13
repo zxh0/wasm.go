@@ -32,7 +32,7 @@ func Validate(module binary.Module) (err error) {
 }
 
 func (v *moduleValidator) validate() {
-	v.validateTypeSec()
+	//v.validateTypeSec()
 	v.validateImportSec()
 	v.validateFuncSec()
 	v.validateTableSec()

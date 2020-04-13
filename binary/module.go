@@ -125,6 +125,27 @@ type Data struct {
 	Init   []byte
 }
 
+// TODO
+func (module Module) GetResultTypes(bt BlockType) []ValType {
+	return module.GetBlockType(bt).ResultTypes
+}
+func (module Module) GetBlockType(bt BlockType) FuncType {
+	switch bt {
+	case -1:
+		return FuncType{ResultTypes: []ValType{ValTypeI32}}
+	case -2:
+		return FuncType{ResultTypes: []ValType{ValTypeI64}}
+	case -3:
+		return FuncType{ResultTypes: []ValType{ValTypeF32}}
+	case -4:
+		return FuncType{ResultTypes: []ValType{ValTypeF64}}
+	case -64:
+		return FuncType{}
+	default:
+		return module.TypeSec[bt]
+	}
+}
+
 func (code Code) GetLocalCount() uint64 {
 	n := uint64(0)
 	for _, locals := range code.Locals {

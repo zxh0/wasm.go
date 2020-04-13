@@ -39,7 +39,7 @@ func (n *NativeInstance) Get(name string) interface{} {
 	return n.exported[name]
 }
 
-func (n *NativeInstance) CallFunc(name string, args ...interface{}) (interface{}, error) {
+func (n *NativeInstance) CallFunc(name string, args ...interface{}) ([]interface{}, error) {
 	return n.exported[name].(Function).Call(args...) // TODO
 }
 

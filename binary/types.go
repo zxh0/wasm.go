@@ -20,11 +20,17 @@ const (
 
 	PageSize     = 65536 // 64KB
 	MaxPageCount = 65536 // 2^16
+
+	BlockTypeI32   BlockType = -1
+	BlockTypeI64   BlockType = -2
+	BlockTypeF32   BlockType = -3
+	BlockTypeF64   BlockType = -4
+	BlockTypeEmpty BlockType = -64
 )
 
 type ValType = byte
 
-type BlockType = []ValType
+type BlockType = int32
 type MemType = Limits
 
 type FuncType struct {

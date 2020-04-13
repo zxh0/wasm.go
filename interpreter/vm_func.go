@@ -36,7 +36,7 @@ func newInternalFunc(vm *vm, ft binary.FuncType,
 func (f vmFunc) Type() binary.FuncType {
 	return f._type
 }
-func (f vmFunc) Call(args ...interface{}) (interface{}, error) {
+func (f vmFunc) Call(args ...interface{}) ([]interface{}, error) {
 	if f.goFunc != nil {
 		return f.goFunc.Call(args...)
 	}

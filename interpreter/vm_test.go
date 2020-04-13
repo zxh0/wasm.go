@@ -27,6 +27,10 @@ func TestOperandStack(t *testing.T) {
 	require.Equal(t, false, stack.popBool())
 	require.Equal(t, true, stack.popBool())
 	require.Equal(t, 0, len(stack.slots))
+
+	stack = &operandStack{slots: []uint64{1, 2, 3, 4, 5}}
+	require.Equal(t, []uint64{3, 4, 5}, stack.popU64s(3))
+	require.Equal(t, []uint64{1, 2}, stack.slots)
 }
 
 func TestLocalVar(t *testing.T) {

@@ -17,7 +17,7 @@ type nativeFunction struct {
 func (nf nativeFunction) Type() binary.FuncType {
 	return nf.t
 }
-func (nf nativeFunction) Call(args ...interface{}) (interface{}, error) {
+func (nf nativeFunction) Call(args ...interface{}) ([]interface{}, error) {
 	return nf.f(args...)
 }
 
@@ -27,7 +27,7 @@ func wrapNativeFunc(nf interface{}) (Function, error) {
 		return nil, err
 	}
 
-	f := func(args ...interface{}) (interface{}, error) {
+	f := func(args ...interface{}) ([]interface{}, error) {
 		return callNativeFunc(ft, nf, args...)
 	}
 
@@ -35,9 +35,10 @@ func wrapNativeFunc(nf interface{}) (Function, error) {
 }
 
 func callNativeFunc(ft binary.FuncType,
-	nf interface{}, args ...interface{}) (interface{}, error) {
+	nf interface{}, args ...interface{}) ([]interface{}, error) {
 
 	paramCount := len(ft.ParamTypes)
+	resultCount := len(ft.ResultTypes)
 	if paramCount != len(args) {
 		return nil, errors.New("wrong number of args")
 	}
@@ -57,17 +58,19 @@ func callNativeFunc(ft binary.FuncType,
 	}
 
 	out := reflect.ValueOf(nf).Call(in)
-	if len(out) != len(ft.ResultTypes) {
-		return nil, errors.New("result type mismatch")
+	if len(out) != resultCount {
+		return nil, errors.New("wrong number of results")
 	}
-	if len(ft.ResultTypes) > 0 {
-		rt, err := getNativeValType(out[0].Kind())
-		if err != nil || rt != ft.ResultTypes[0] {
+	results := make([]interface{}, resultCount)
+	for i, r := range out {
+		rt, err := getNativeValType(r.Kind())
+		if err != nil || rt != ft.ResultTypes[i] {
 			return nil, errors.New("result type mismatch")
 		}
+		results[i] = r.Interface()
 	}
 
-	return out[0].Interface(), nil
+	return results, nil
 }
 
 func getNativeFuncType(nf interface{}) (ft binary.FuncType, err error) {

@@ -14,33 +14,36 @@ func nop(vm *vm, _ interface{}) {
 
 func block(vm *vm, args interface{}) {
 	blockArgs := args.(binary.BlockArgs)
-	vm.enterBlock(blockArgs.Instrs, blockArgs.RT, btBlock, 0)
+	bt := vm.module.GetBlockType(blockArgs.RT)
+	vm.enterBlock(binary.Block, bt, blockArgs.Instrs)
 }
 
 func loop(vm *vm, args interface{}) {
 	blockArgs := args.(binary.BlockArgs)
-	vm.enterBlock(blockArgs.Instrs, blockArgs.RT, btLoop, 0)
+	bt := vm.module.GetBlockType(blockArgs.RT)
+	vm.enterBlock(binary.Loop, bt, blockArgs.Instrs)
 }
 
 func _if(vm *vm, args interface{}) {
 	ifArgs := args.(binary.IfArgs)
+	bt := vm.module.GetBlockType(ifArgs.RT)
 	if vm.popBool() {
-		vm.enterBlock(ifArgs.Instrs1, ifArgs.RT, btBlock, 0)
+		vm.enterBlock(binary.If, bt, ifArgs.Instrs1)
 	} else {
-		vm.enterBlock(ifArgs.Instrs2, ifArgs.RT, btBlock, 0)
+		vm.enterBlock(binary.If, bt, ifArgs.Instrs2)
 	}
 }
 
 func br(vm *vm, args interface{}) {
 	labelIdx := int(args.(uint32))
 	for i := 0; i < labelIdx; i++ {
-		vm.popBlockFrame()
+		vm.popControlFrame()
 	}
-	if bf := vm.topBlockFrame(); bf.bt != btLoop {
+	if cf := vm.topControlFrame(); cf.opcode != binary.Loop {
 		vm.exitBlock()
 	} else {
-		vm.clearBlock(bf)
-		bf.pc = 0
+		vm.resetBlock(cf)
+		cf.pc = 0
 	}
 }
 
@@ -61,14 +64,14 @@ func brTable(vm *vm, args interface{}) {
 }
 
 func _return(vm *vm, _ interface{}) {
-	var bf *blockFrame
+	var cf *controlFrame
 	for {
-		bf = vm.popBlockFrame()
-		if bf.bt == btFunc {
+		cf = vm.popControlFrame()
+		if cf.opcode == binary.Call {
 			break
 		}
 	}
-	vm.clearBlock(bf)
+	vm.clearBlock(cf)
 }
 
 func call(vm *vm, args interface{}) {
@@ -86,11 +89,11 @@ func callFunc(vm *vm, f vmFunc) {
 
 func callExternalFunc(vm *vm, f vmFunc) {
 	args := popArgs(vm, f._type)
-	result, err := f.goFunc.Call(args...)
+	results, err := f.goFunc.Call(args...)
 	if err != nil {
 		panic(err)
 	}
-	pushResult(vm, f._type, result)
+	pushResults(vm, f._type, results)
 }
 
 func popArgs(vm *vm, sig binary.FuncType) []interface{} {
@@ -111,8 +114,11 @@ func popArgs(vm *vm, sig binary.FuncType) []interface{} {
 	return args
 }
 
-func pushResult(vm *vm, sig binary.FuncType, result interface{}) {
-	if len(sig.ResultTypes) > 0 {
+func pushResults(vm *vm, sig binary.FuncType, results []interface{}) {
+	if len(sig.ResultTypes) != len(results) {
+		panic("TODO")
+	}
+	for _, result := range results {
 		switch sig.ResultTypes[0] {
 		case binary.ValTypeI32:
 			vm.pushS32(result.(int32))
@@ -141,14 +147,13 @@ operand stack:
 |  ............ |
 */
 func callInternalFunc(vm *vm, f vmFunc) {
+	vm.enterBlock(binary.Call, f._type, f.code.Expr)
+
 	// alloc locals
 	localCount := int(f.code.GetLocalCount())
 	for i := 0; i < localCount; i++ {
 		vm.pushU64(0)
 	}
-
-	paramsCount := len(f._type.ParamTypes)
-	vm.enterBlock(f.code.Expr, f._type.ResultTypes, btFunc, localCount+paramsCount)
 }
 
 func callIndirect(vm *vm, args interface{}) {
@@ -174,9 +179,9 @@ func callIndirect(vm *vm, args interface{}) {
 	}
 
 	fcArgs := popArgs(vm, ft)
-	result, err := f.Call(fcArgs...)
+	results, err := f.Call(fcArgs...)
 	if err != nil {
 		panic(err)
 	}
-	pushResult(vm, ft, result)
+	pushResults(vm, ft, results)
 }

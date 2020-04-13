@@ -27,7 +27,7 @@ func newSpecTestInstance() instance.Instance {
 	return specTest
 }
 
-func _print(args ...interface{}) (interface{}, error) {
+func _print(args ...interface{}) ([]interface{}, error) {
 	if Debug {
 		for _, arg := range args {
 			fmt.Printf("spectest> %v\n", arg)

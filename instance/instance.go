@@ -3,17 +3,17 @@ package instance
 import "github.com/zxh0/wasm.go/binary"
 
 type Map = map[string]Instance
-type GoFunc = func(args ...interface{}) (interface{}, error)
+type GoFunc = func(args ...interface{}) ([]interface{}, error)
 
 type Instance interface {
 	Get(name string) interface{}
-	CallFunc(name string, args ...interface{}) (interface{}, error)
+	CallFunc(name string, args ...interface{}) ([]interface{}, error)
 	GetGlobalValue(name string) (interface{}, error)
 }
 
 type Function interface {
 	Type() binary.FuncType
-	Call(args ...interface{}) (interface{}, error)
+	Call(args ...interface{}) ([]interface{}, error)
 }
 
 type Table interface {

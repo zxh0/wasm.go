@@ -171,11 +171,7 @@ func (writer *wasmWriter) writeData(data Data) {
 
 // types
 func (writer *wasmWriter) writeBlockType(bt BlockType) {
-	if len(bt) == 0 {
-		writer.writeByte(NoVal)
-	} else {
-		writer.writeByte(bt[0])
-	}
+	writer.writeVarS32(bt)
 }
 func (writer *wasmWriter) writeFuncType(ft FuncType) {
 	writer.writeByte(FtTag)

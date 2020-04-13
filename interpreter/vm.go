@@ -14,7 +14,7 @@ var _ instance.Instance = (*vm)(nil)
 
 type vm struct {
 	operandStack
-	blockStack
+	controlStack
 
 	module  binary.Module
 	memory  instance.Memory
@@ -196,45 +196,47 @@ func (vm *vm) execStartFunc() {
 
 /* block stack */
 
-func (vm *vm) enterBlock(instrs []binary.Instruction,
-	rt binary.BlockType, bt byte, localCount int) {
+func (vm *vm) enterBlock(opcode byte,
+	bt binary.FuncType, instrs []binary.Instruction) {
 
-	bp := vm.stackSize() - localCount
-	bf := newBlockFrame(instrs, rt, bt, bp)
-	vm.pushBlockFrame(bf)
-	if bt == btFunc {
+	bp := vm.stackSize() - len(bt.ParamTypes)
+	cf := newControlFrame(opcode, bt, instrs, bp)
+	vm.pushControlFrame(cf)
+	if opcode == binary.Call {
 		vm.local0Idx = uint32(bp)
 	}
 }
 func (vm *vm) exitBlock() {
-	bf := vm.popBlockFrame()
-	vm.clearBlock(bf)
+	cf := vm.popControlFrame()
+	vm.clearBlock(cf)
 }
-func (vm *vm) clearBlock(bf *blockFrame) {
-	var result uint64
-	if len(bf.rt) > 0 {
-		result = vm.popU64()
-	}
-	for vm.stackSize() > bf.bp {
+func (vm *vm) clearBlock(cf *controlFrame) {
+	results := vm.popU64s(len(cf.bt.ResultTypes))
+	for vm.stackSize() > cf.bp {
 		vm.popU64()
 	}
-	if len(bf.rt) > 0 {
-		vm.pushU64(result)
-	}
-	if bf.bt == btFunc && vm.blockDepth() > 0 {
+	vm.pushU64s(results)
+	if cf.opcode == binary.Call && vm.controlDepth() > 0 {
 		vm.local0Idx = uint32(vm.topFuncFrame().bp)
 	}
+}
+func (vm *vm) resetBlock(cf *controlFrame) {
+	results := vm.popU64s(len(cf.bt.ParamTypes))
+	for vm.stackSize() > cf.bp {
+		vm.popU64()
+	}
+	vm.pushU64s(results)
 }
 
 /* func call */
 
 func (vm *vm) reset() {
 	vm.operandStack.reset()
-	vm.blockStack.reset()
+	vm.controlStack.reset()
 }
 
 func (vm *vm) safeCallFunc(f vmFunc,
-	args []interface{}) (result interface{}, err error) {
+	args []interface{}) (results []interface{}, err error) {
 
 	defer func() {
 		if _err := recover(); _err != nil {
@@ -252,23 +254,23 @@ func (vm *vm) safeCallFunc(f vmFunc,
 		fmt.Printf("safe call! %v\n", f) // TODO
 	}
 
-	result = vm.callFunc(f, args)
+	results = vm.callFunc(f, args)
 	return
 }
 
-func (vm *vm) callFunc(f vmFunc, args []interface{}) interface{} {
+func (vm *vm) callFunc(f vmFunc, args []interface{}) []interface{} {
 	vm.pushArgs(f._type, args)
 	callFunc(vm, f)
 	if f.goFunc == nil {
 		vm.loop()
 	}
-	return vm.popResult(f._type)
+	return vm.popResults(f._type)
 }
 
 func (vm *vm) loop() {
-	depth := vm.blockDepth()
-	for vm.blockDepth() >= depth {
-		frame := vm.topBlockFrame()
+	depth := vm.controlDepth()
+	for vm.controlDepth() >= depth {
+		frame := vm.topControlFrame()
 		if frame.pc == len(frame.instrs) {
 			vm.exitBlock()
 		} else {
@@ -286,7 +288,7 @@ func (vm *vm) execInstr(instr binary.Instruction) {
 
 func (vm *vm) logInstr(instr binary.Instruction) {
 	if vm.debug {
-		fmt.Print(strings.Repeat(">", vm.blockDepth()))
+		fmt.Print(strings.Repeat(">", vm.controlDepth()))
 		if instr.Opcode != binary.Call {
 			fmt.Printf("%s %v\n", instr.GetOpname(), instr.Args)
 		} else {
@@ -321,22 +323,23 @@ func (vm *vm) pushArgs(ft binary.FuncType, args []interface{}) {
 		}
 	}
 }
-func (vm *vm) popResult(ft binary.FuncType) interface{} {
-	if len(ft.ResultTypes) == 0 {
-		return nil
+func (vm *vm) popResults(ft binary.FuncType) []interface{} {
+	results := make([]interface{}, len(ft.ResultTypes))
+	for n := len(ft.ResultTypes) - 1; n >= 0; n-- {
+		switch ft.ResultTypes[n] {
+		case binary.ValTypeI32:
+			results[n] = vm.popS32()
+		case binary.ValTypeI64:
+			results[n] = vm.popS64()
+		case binary.ValTypeF32:
+			results[n] = vm.popF32()
+		case binary.ValTypeF64:
+			results[n] = vm.popF64()
+		default:
+			panic("unreachable")
+		}
 	}
-	switch ft.ResultTypes[0] {
-	case binary.ValTypeI32:
-		return vm.popS32()
-	case binary.ValTypeI64:
-		return vm.popS64()
-	case binary.ValTypeF32:
-		return vm.popF32()
-	case binary.ValTypeF64:
-		return vm.popF64()
-	default:
-		panic("unreachable")
-	}
+	return results
 }
 
 /* instance.Instance */
@@ -381,7 +384,7 @@ func (vm vm) GetGlobalValue(name string) (interface{}, error) {
 	return nil, fmt.Errorf("global not found: " + name)
 }
 
-func (vm *vm) CallFunc(name string, args ...interface{}) (interface{}, error) {
+func (vm *vm) CallFunc(name string, args ...interface{}) ([]interface{}, error) {
 	fIdx, ok := vm.getFunc(name) // TODO
 	if !ok {
 		return nil, fmt.Errorf("function not found: " + name)

@@ -156,11 +156,20 @@ func (reader *wasmReader) readSections(module *Module) {
 		}
 		prevSecID = secID
 
-		n := reader.readVarU32()
-		remainingBeforeRead := reader.remaining()
-		reader.readNonCustomSec(secID, module)
-		if reader.remaining()+int(n) != remainingBeforeRead {
-			panic(fmt.Errorf("section size mismatch, id: %d", secID))
+		// TODO
+		if secID == SecElemID || secID == SecCodeID || secID == SecDataID {
+			secReader := &wasmReader{data: reader.readBytes()}
+			secReader.readNonCustomSec(secID, module)
+			if secReader.remaining() > 0 {
+				panic(fmt.Errorf("section size mismatch, id: %d", secID))
+			}
+		} else {
+			n := reader.readVarU32()
+			remainingBeforeRead := reader.remaining()
+			reader.readNonCustomSec(secID, module)
+			if reader.remaining()+int(n) != remainingBeforeRead {
+				panic(fmt.Errorf("section size mismatch, id: %d", secID))
+			}
 		}
 	}
 }
@@ -385,28 +394,27 @@ func (reader *wasmReader) readValTypes() []ValType {
 }
 func (reader *wasmReader) readValType() ValType {
 	vt := reader.readByte()
-	checkValType(vt)
-	return vt
-}
-func checkValType(vt byte) {
 	switch vt {
-	case ValTypeI32:
-	case ValTypeI64:
-	case ValTypeF32:
-	case ValTypeF64:
+	case ValTypeI32, ValTypeI64, ValTypeF32, ValTypeF64:
 	default:
 		panic(fmt.Errorf("malformed value type: %d", vt))
 	}
+	return vt
 }
 
 // entity types
-func (reader *wasmReader) readBlockType() []ValType {
-	if b := reader.readByte(); b == NoVal {
-		return nil
-	} else {
-		checkValType(b)
-		return []ValType{b}
+func (reader *wasmReader) readBlockType() int32 {
+	bt := reader.readVarS32()
+	if bt < 0 {
+		switch bt {
+		case BlockTypeI32, BlockTypeI64,
+			BlockTypeF32, BlockTypeF64,
+			BlockTypeEmpty:
+		default:
+			panic(fmt.Errorf("malformed block type: %d", bt))
+		}
 	}
+	return bt
 }
 func (reader *wasmReader) readFuncType() FuncType {
 	ft := FuncType{

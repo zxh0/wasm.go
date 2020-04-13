@@ -21,9 +21,10 @@ func add(a, b int32) int32 {
 func TestNativeFuncCall(t *testing.T) {
 	nf, err := wrapNativeFunc(add)
 	require.NoError(t, err)
-	x, err := nf.Call(int32(1), int32(2))
+	results, err := nf.Call(int32(1), int32(2))
 	require.NoError(t, err)
-	require.Equal(t, int32(3), x)
+	require.Equal(t, 1, len(results))
+	require.Equal(t, int32(3), results[0])
 }
 
 func TestNativeFuncType(t *testing.T) {

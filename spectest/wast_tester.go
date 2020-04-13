@@ -60,10 +60,14 @@ func (t *wastTester) test() (err error) {
 
 func (t *wastTester) instantiate(m *text.WatModule) (err error) {
 	t.instance, err = t.wasmImpl.Instantiate(*m.Module, t.instances)
-	if err == nil && m.Name != "" {
-		t.instances[m.Name] = t.instance
+	if err == nil {
+		if m.Name != "" {
+			t.instances[m.Name] = t.instance
+		}
+	} else {
+		err = fmt.Errorf("line: %d, %s", m.Line, err.Error())
 	}
-	return err
+	return
 }
 func (t *wastTester) instantiateBin(m *text.BinaryModule) {
 	tmp, err := t.wasmImpl.InstantiateBin(m.Data, t.instances)
@@ -78,15 +82,15 @@ func (t *wastTester) instantiateBin(m *text.BinaryModule) {
 func (t *wastTester) runAssertion(a *text.Assertion) error {
 	switch a.Kind {
 	case text.AssertReturn:
-		result, err := t.runAction(a.Action)
-		return assertReturn(a, result, err)
+		results, err := t.runAction(a.Action)
+		return assertReturn(a, results, err)
 	case text.AssertTrap:
 		if a.Action != nil {
-			result, err := t.runAction(a.Action)
-			return assertTrap(a, result, err)
+			results, err := t.runAction(a.Action)
+			return assertTrap(a, results, err)
 		} else {
 			err := t.instantiate(a.Module.(*text.WatModule))
-			return assertTrap(a, err, err)
+			return assertTrap(a, nil, err)
 		}
 	case text.AssertExhaustion:
 		// very slow!
@@ -115,7 +119,7 @@ func (t *wastTester) runAssertion(a *text.Assertion) error {
 	return nil
 }
 
-func (t *wastTester) runAction(a *text.Action) (interface{}, error) {
+func (t *wastTester) runAction(a *text.Action) ([]interface{}, error) {
 	_i := t.instance
 	if a.ModuleName != "" {
 		_i = t.instances[a.ModuleName]
@@ -127,45 +131,49 @@ func (t *wastTester) runAction(a *text.Action) (interface{}, error) {
 		return _i.CallFunc(a.ItemName, getConsts(a.Expr)...)
 	case text.ActionGet:
 		//println("get " + a.ItemName)
-		return _i.GetGlobalValue(a.ItemName)
+		val, err := _i.GetGlobalValue(a.ItemName)
+		return []interface{}{val}, err
 	default:
 		panic("unreachable")
 	}
 }
 
-func assertReturn(a *text.Assertion, result interface{}, err error) error {
-	if err != nil {
-		result = err
-	}
-
+func assertReturn(a *text.Assertion, results []interface{}, err error) error {
 	expectedVals := getConsts(a.Result)
-	var expectedVal interface{} = nil
-	if n := len(expectedVals); n == 1 {
-		expectedVal = expectedVals[0]
-	} else if n > 1 {
-		panic("TODO")
+	if err != nil {
+		return fmt.Errorf("line: %d, expected return: %v, got: %v",
+			a.Line, expectedVals, err)
 	}
 
-	if isNaN32(expectedVal) { // TODO
-		if !isNaN32(result) {
-			return fmt.Errorf("line: %d, expected return: NaN, got: %v",
-				a.Line, result)
-		}
-	} else if isNaN64(expectedVal) { // TODO
-		if !isNaN64(result) {
-			return fmt.Errorf("line: %d, expected return: NaN, got: %v",
-				a.Line, result)
-		}
-	} else if result != expectedVal {
+	if len(results) != len(expectedVals) {
 		return fmt.Errorf("line: %d, expected return: %v, got: %v",
-			a.Line, expectedVal, result)
+			a.Line, expectedVals, results)
 	}
+
+	for i, result := range results {
+		expectedVal := expectedVals[i]
+		if isNaN32(expectedVal) { // TODO
+			if !isNaN32(result) {
+				return fmt.Errorf("line: %d, expected return: NaN, got: %v",
+					a.Line, result)
+			}
+		} else if isNaN64(expectedVal) { // TODO
+			if !isNaN64(result) {
+				return fmt.Errorf("line: %d, expected return: NaN, got: %v",
+					a.Line, result)
+			}
+		} else if result != expectedVal {
+			return fmt.Errorf("line: %d, expected return: %v, got: %v",
+				a.Line, expectedVal, result)
+		}
+	}
+
 	return nil
 }
-func assertTrap(a *text.Assertion, result interface{}, err error) error {
+func assertTrap(a *text.Assertion, results []interface{}, err error) error {
 	if err == nil {
 		return fmt.Errorf("line: %d, expected trap: %v, got: %v",
-			a.Line, a.Failure, result)
+			a.Line, a.Failure, results)
 	}
 	if strings.Index(err.Error(), a.Failure) < 0 {
 		return fmt.Errorf("line: %d, expected trap: %v, got: %v",
@@ -182,22 +190,22 @@ func assertError(a *text.Assertion, err error) error {
 }
 
 func getConsts(expr []binary.Instruction) []interface{} {
-	args := make([]interface{}, len(expr))
+	vals := make([]interface{}, len(expr))
 	for i, instr := range expr {
 		switch instr.Opcode {
 		case binary.I32Const:
-			args[i] = instr.Args.(int32)
+			vals[i] = instr.Args.(int32)
 		case binary.I64Const:
-			args[i] = instr.Args.(int64)
+			vals[i] = instr.Args.(int64)
 		case binary.F32Const:
-			args[i] = instr.Args.(float32)
+			vals[i] = instr.Args.(float32)
 		case binary.F64Const:
-			args[i] = instr.Args.(float64)
+			vals[i] = instr.Args.(float64)
 		default:
 			panic("TODO")
 		}
 	}
-	return args
+	return vals
 }
 
 func isNaN32(x interface{}) bool {

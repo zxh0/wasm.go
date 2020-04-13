@@ -367,9 +367,28 @@ func (v *watVisitor) VisitValType(ctx *parser.ValTypeContext) interface{} {
 }
 func (v *watVisitor) VisitBlockType(ctx *parser.BlockTypeContext) interface{} {
 	if ctx.Result() != nil {
-		return ctx.Result().Accept(v).(binary.BlockType)
+		result := ctx.Result().Accept(v).([]binary.ValType)
+		if len(result) == 1 {
+			switch result[0] {
+			case binary.ValTypeI32:
+				return binary.BlockTypeI32
+			case binary.ValTypeI64:
+				return binary.BlockTypeI64
+			case binary.ValTypeF32:
+				return binary.BlockTypeF32
+			case binary.ValTypeF64:
+				return binary.BlockTypeF64
+			}
+		}
+		ft := binary.FuncType{ResultTypes: result}
+		ftIdx := v.moduleBuilder.addTypeUse(ft)
+		return binary.BlockType(ftIdx)
 	}
-	return binary.BlockType{}
+	if ctx.TypeUse() != nil {
+		ftIdx := ctx.TypeUse().Accept(v).(int)
+		return binary.BlockType(ftIdx)
+	}
+	return binary.BlockTypeEmpty
 }
 func (v *watVisitor) VisitGlobalType(ctx *parser.GlobalTypeContext) interface{} {
 	vt := ctx.ValType().Accept(v).(binary.ValType)
