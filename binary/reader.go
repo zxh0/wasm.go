@@ -156,20 +156,11 @@ func (reader *wasmReader) readSections(module *Module) {
 		}
 		prevSecID = secID
 
-		// TODO
-		if secID == SecElemID || secID == SecCodeID || secID == SecDataID {
-			secReader := &wasmReader{data: reader.readBytes()}
-			secReader.readNonCustomSec(secID, module)
-			if secReader.remaining() > 0 {
-				panic(fmt.Errorf("section size mismatch, id: %d", secID))
-			}
-		} else {
-			n := reader.readVarU32()
-			remainingBeforeRead := reader.remaining()
-			reader.readNonCustomSec(secID, module)
-			if reader.remaining()+int(n) != remainingBeforeRead {
-				panic(fmt.Errorf("section size mismatch, id: %d", secID))
-			}
+		n := reader.readVarU32()
+		remainingBeforeRead := reader.remaining()
+		reader.readNonCustomSec(secID, module)
+		if reader.remaining()+int(n) != remainingBeforeRead {
+			panic(fmt.Errorf("section size mismatch, id: %d", secID))
 		}
 	}
 }
