@@ -22,14 +22,17 @@ type Script struct {
 }
 
 type WatModule struct {
+	Line   int
 	Name   string
 	Module *binary.Module
 }
 type BinaryModule struct {
+	Line int
 	Name string
 	Data []byte
 }
 type QuotedModule struct {
+	Line int
 	Name string
 	Text string
 }

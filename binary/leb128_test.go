@@ -57,8 +57,12 @@ func TestDecodeVarUint(t *testing.T) {
 }
 
 func TestDecodeVarInt(t *testing.T) {
-	data := []byte{0xC0, 0xBB, 0x78}
-	testDecodeVarInt32(t, data, int32(-123456), 3)
+	testDecodeVarInt32(t, []byte{0xC0, 0xBB, 0x78}, int32(-123456), 3)
+	testDecodeVarInt32(t, []byte{0x7F}, int32(-1), 1)
+	testDecodeVarInt32(t, []byte{0x7E}, int32(-2), 1)
+	testDecodeVarInt32(t, []byte{0x7D}, int32(-3), 1)
+	testDecodeVarInt32(t, []byte{0x7C}, int32(-4), 1)
+	testDecodeVarInt32(t, []byte{0x40}, int32(-64), 1)
 }
 
 func testDecodeVarUint32(t *testing.T, data []byte, n uint32, w int) {

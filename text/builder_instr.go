@@ -1,13 +1,38 @@
 package text
 
-import "github.com/zxh0/wasm.go/binary"
+import (
+	"github.com/zxh0/wasm.go/binary"
+)
 
 func newInstruction(opname string) binary.Instruction {
-	opcode, ok := binary.GetOpcode(opname)
-	if !ok {
+	if opcode, ok := binary.GetOpcode(opname); ok {
+		return binary.Instruction{Opcode: opcode}
+	}
+	return newTruncSat(opname)
+}
+func newTruncSat(opname string) binary.Instruction {
+	instr := binary.Instruction{Opcode: binary.TruncSat}
+	switch opname {
+	case "i32.trunc_sat_f32_s":
+		instr.Args = 0x00
+	case "i32.trunc_sat_f32_u":
+		instr.Args = 0x01
+	case "i32.trunc_sat_f64_s":
+		instr.Args = 0x02
+	case "i32.trunc_sat_f64_u":
+		instr.Args = 0x03
+	case "i64.trunc_sat_f32_s":
+		instr.Args = 0x04
+	case "i64.trunc_sat_f32_u":
+		instr.Args = 0x05
+	case "i64.trunc_sat_f64_s":
+		instr.Args = 0x06
+	case "i64.trunc_sat_f64_u":
+		instr.Args = 0x07
+	default:
 		panic("unreachable")
 	}
-	return binary.Instruction{Opcode: opcode}
+	return instr
 }
 
 func newI32Const0() binary.Instruction {

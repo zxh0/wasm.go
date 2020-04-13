@@ -110,8 +110,8 @@ func (ft FuncType) String() string {
 	return ft.GetSignature()
 }
 func (gt GlobalType) String() string {
-	return fmt.Sprintf("{type: %s, mut: %v}",
-		ValTypeToStr(gt.ValType), gt.Mut == 1)
+	return fmt.Sprintf("{type: %s, mut: %d}",
+		ValTypeToStr(gt.ValType), gt.Mut)
 }
 func (limits Limits) String() string {
 	return fmt.Sprintf("{min: %d, max: %d}",

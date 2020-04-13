@@ -46,6 +46,7 @@ func (v *watVisitor) VisitWatModule(ctx *parser.WatModuleContext) interface{} {
 		field.Accept(v)
 	}
 	return &WatModule{
+		Line:   ctx.GetKw().GetLine(),
 		Name:   name,
 		Module: v.moduleBuilder.module,
 	}

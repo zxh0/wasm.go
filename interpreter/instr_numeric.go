@@ -579,3 +579,74 @@ func f32ReinterpretI32(vm *vm, _ interface{}) {
 func f64ReinterpretI64(vm *vm, _ interface{}) {
 	//vm.pushF64(math.Float64frombits(vm.popU64()))
 }
+
+func truncSat(vm *vm, args interface{}) {
+	switch args.(int) {
+	case 0: // i32.trunc_sat_f32_s
+		v := truncSatS(float64(vm.popF32()), 32)
+		vm.pushS32(int32(v))
+	case 1: // i32.trunc_sat_f32_u
+		v := truncSatU(float64(vm.popF32()), 32)
+		vm.pushU32(uint32(v))
+	case 2: // i32.trunc_sat_f64_s
+		v := truncSatS(vm.popF64(), 32)
+		vm.pushS32(int32(v))
+	case 3: // i32.trunc_sat_f64_u
+		v := truncSatU(vm.popF64(), 32)
+		vm.pushU32(uint32(v))
+	case 4: // i64.trunc_sat_f32_s
+		v := truncSatS(float64(vm.popF32()), 64)
+		vm.pushS64(v)
+	case 5: // i64.trunc_sat_f32_u
+		v := truncSatU(float64(vm.popF32()), 64)
+		vm.pushU64(v)
+	case 6: // i64.trunc_sat_f64_s
+		v := truncSatS(vm.popF64(), 64)
+		vm.pushS64(v)
+	case 7: // i64.trunc_sat_f64_u
+		v := truncSatU(vm.popF64(), 64)
+		vm.pushU64(v)
+	default:
+		panic("unreachable")
+	}
+}
+
+func truncSatU(z float64, n int) uint64 {
+	if math.IsNaN(z) {
+		return 0
+	}
+	if math.IsInf(z, -1) {
+		return 0
+	}
+	max := (uint64(1) << n) - 1
+	if math.IsInf(z, 1) {
+		return max
+	}
+	if x := math.Trunc(z); x < 0 {
+		return 0
+	} else if x >= float64(max) {
+		return max
+	} else {
+		return uint64(x)
+	}
+}
+func truncSatS(z float64, n int) int64 {
+	if math.IsNaN(z) {
+		return 0
+	}
+	min := -(int64(1) << (n - 1))
+	max := (int64(1) << (n - 1)) - 1
+	if math.IsInf(z, -1) {
+		return min
+	}
+	if math.IsInf(z, 1) {
+		return max
+	}
+	if x := math.Trunc(z); x < float64(min) {
+		return min
+	} else if x >= float64(max) {
+		return max
+	} else {
+		return int64(x)
+	}
+}

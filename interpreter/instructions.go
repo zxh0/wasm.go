@@ -177,4 +177,5 @@ func init() {
 	instrTable[binary.I64ReinterpretF64] = i64ReinterpretF64
 	instrTable[binary.F32ReinterpretI32] = f32ReinterpretI32
 	instrTable[binary.F64ReinterpretI64] = f64ReinterpretI64
+	instrTable[binary.TruncSat] = truncSat
 }

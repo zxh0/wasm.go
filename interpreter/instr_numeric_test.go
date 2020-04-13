@@ -224,6 +224,18 @@ func TestConversions(t *testing.T) {
 	testUnOp(t, binary.F64ReinterpretI64, int64(0x3FF8_0000_0000_0000), 1.5)
 }
 
+func TestTruncSat(t *testing.T) {
+	// i64.trunc_sat_f32_s
+	testI64TruncSat(t, 4, float32(9223372036854775808.0), int64(0x7fffffffffffffff))
+}
+
+func testI64TruncSat(t *testing.T, args int, b, c interface{}) {
+	vm := &vm{}
+	pushVal(vm, b)
+	truncSat(vm, args)
+	require.Equal(t, c, popVal(vm, c))
+}
+
 func testI32UnOp(t *testing.T, opcode byte, b, c int32) {
 	testI32BinOp(t, opcode, 0, b, c)
 }

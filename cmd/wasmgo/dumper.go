@@ -14,11 +14,9 @@ type dumper struct {
 	importedGlobalCount int
 }
 
-func newDumper(module binary.Module) *dumper {
-	return &dumper{module: module}
-}
+func dump(module binary.Module) {
+	d := &dumper{module: module}
 
-func (d *dumper) dump() {
 	fmt.Printf("Version: 0x%02x\n", d.module.Version)
 	d.dumpTypeSec()
 	d.dumpImportSec()
@@ -67,7 +65,7 @@ func (d *dumper) dumpImportSec() {
 }
 
 func (d *dumper) dumpFuncSec() {
-	fmt.Printf("Function[%d]:\n", len(d.module.ImportSec))
+	fmt.Printf("Function[%d]:\n", len(d.module.FuncSec))
 	for i, sig := range d.module.FuncSec {
 		fmt.Printf("  func[%d]: sig=%d\n",
 			d.importedFuncCount+i, sig)

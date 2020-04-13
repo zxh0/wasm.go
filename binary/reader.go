@@ -466,7 +466,7 @@ func (reader *wasmReader) readIndices() []uint32 {
 
 func (reader *wasmReader) readExpr() Expr {
 	instrs, end := reader.readInstructions()
-	if end != _End {
+	if end != End_ {
 		panic(fmt.Errorf("invalid expr end: %d", end))
 	}
 	return instrs
@@ -475,7 +475,7 @@ func (reader *wasmReader) readExpr() Expr {
 func (reader *wasmReader) readInstructions() (instrs []Instruction, end byte) {
 	for {
 		instr := reader.readInstruction()
-		if instr.Opcode == _Else || instr.Opcode == _End {
+		if instr.Opcode == Else_ || instr.Opcode == End_ {
 			end = instr.Opcode
 			return
 		}
@@ -532,7 +532,7 @@ func (reader *wasmReader) readBlockArgs() (args BlockArgs) {
 	var end byte
 	args.RT = reader.readBlockType()
 	args.Instrs, end = reader.readInstructions()
-	if end != _End {
+	if end != End_ {
 		panic(fmt.Errorf("invalid block end: %d", end))
 	}
 	return
@@ -542,9 +542,9 @@ func (reader *wasmReader) readIfArgs() (args IfArgs) {
 	var end byte
 	args.RT = reader.readBlockType()
 	args.Instrs1, end = reader.readInstructions()
-	if end == _Else {
+	if end == Else_ {
 		args.Instrs2, end = reader.readInstructions()
-		if end != _End {
+		if end != End_ {
 			panic(fmt.Errorf("invalid block end: %d", end))
 		}
 	}

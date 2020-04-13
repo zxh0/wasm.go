@@ -202,7 +202,7 @@ func (writer *wasmWriter) writeExpr(expr Expr) {
 	for _, instr := range expr {
 		writer.writeInstr(instr)
 	}
-	writer.writeByte(_End)
+	writer.writeByte(End_)
 }
 
 func (writer *wasmWriter) writeInstr(instr Instruction) {
@@ -216,7 +216,7 @@ func (writer *wasmWriter) writeInstr(instr Instruction) {
 		args := instr.Args.(IfArgs)
 		writer.writeBlockType(args.RT)
 		writer.writeExpr(args.Instrs1)
-		writer.buf[len(writer.buf)-1] = _Else
+		writer.buf[len(writer.buf)-1] = Else_
 		writer.writeExpr(args.Instrs2)
 	case Br, BrIf:
 		writer.writeVarU32(instr.Args.(uint32))

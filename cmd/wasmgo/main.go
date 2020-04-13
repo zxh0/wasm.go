@@ -112,7 +112,7 @@ func dumpWasm(filename string) error {
 		return err
 	}
 
-	newDumper(module).dump()
+	dump(module)
 	return nil
 }
 

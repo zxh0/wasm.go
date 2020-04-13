@@ -2,13 +2,13 @@ package binary
 
 // Opcodes
 const (
-	Unreachable       = 0x00 //
-	Nop               = 0x01 //
+	Unreachable       = 0x00 // unreachable
+	Nop               = 0x01 // nop
 	Block             = 0x02 // block rt in* end
 	Loop              = 0x03 // loop rt in* end
 	If                = 0x04 // if rt in* else in* end
-	_Else             = 0x05 // else
-	_End              = 0x0B // end
+	Else_             = 0x05 // else
+	End_              = 0x0B // end
 	Br                = 0x0C // br l
 	BrIf              = 0x0D // br_if l
 	BrTable           = 0x0E // br_table l* lN
@@ -174,4 +174,10 @@ const (
 	I64ReinterpretF64 = 0xBD // i64.reinterpret_f64
 	F32ReinterpretI32 = 0xBE // f32.reinterpret_i32
 	F64ReinterpretI64 = 0xBF // f64.reinterpret_i64
+	I32Extend8S       = 0xC0 // i32.extend8_s
+	I32Extend16S      = 0xC1 // i32.extend16_s
+	I64Extend8S       = 0xC2 // i64.extend8_s
+	I64Extend16S      = 0xC3 // i64.extend16_s
+	I64Extend32S      = 0xC4 // i64.extend32_s
+	TruncSat          = 0xFC // <i32|64>.trunc_sat_<f32|64>_<s|u>
 )
