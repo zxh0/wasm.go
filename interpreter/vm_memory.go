@@ -32,23 +32,23 @@ func (mem *memory) Size() uint32 {
 	return uint32(len(mem.data) / binary.PageSize)
 }
 func (mem *memory) Grow(n uint32) uint32 {
-	curPageCount := mem.Size()
+	oldSize := mem.Size()
 	if n == 0 {
-		return curPageCount
+		return oldSize
 	}
 
 	maxPageCount := uint32(binary.MaxPageCount)
 	if max := mem._type.Max; max > 0 {
 		maxPageCount = max
 	}
-	if curPageCount+n > maxPageCount {
+	if oldSize+n > maxPageCount {
 		return 0xFFFFFFFF // -1
 	}
 
-	newData := make([]byte, (curPageCount+n)*binary.PageSize)
+	newData := make([]byte, (oldSize+n)*binary.PageSize)
 	copy(newData, mem.data)
 	mem.data = newData
-	return curPageCount
+	return oldSize
 }
 
 func (mem *memory) Read(offset uint64, buf []byte) {

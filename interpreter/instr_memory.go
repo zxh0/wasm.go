@@ -12,8 +12,8 @@ func memorySize(vm *vm, _ interface{}) {
 	vm.pushU32(vm.memory.Size())
 }
 func memoryGrow(vm *vm, _ interface{}) {
-	n := vm.memory.Grow(vm.popU32())
-	vm.pushU32(n)
+	oldSize := vm.memory.Grow(vm.popU32())
+	vm.pushU32(oldSize)
 }
 
 // load

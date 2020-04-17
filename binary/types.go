@@ -23,9 +23,6 @@ const (
 
 	MutConst byte = 0
 	MutVar   byte = 1
-
-	PageSize     = 65536 // 64KB
-	MaxPageCount = 65536 // 2^16
 )
 
 type ValType = byte
