@@ -64,14 +64,8 @@ func brTable(vm *vm, args interface{}) {
 }
 
 func _return(vm *vm, _ interface{}) {
-	var cf *controlFrame
-	for {
-		cf = vm.popControlFrame()
-		if cf.opcode == binary.Call {
-			break
-		}
-	}
-	vm.clearBlock(cf)
+	_, labelIdx := vm.topCallFrame()
+	br(vm, uint32(labelIdx))
 }
 
 func call(vm *vm, args interface{}) {

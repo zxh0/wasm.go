@@ -212,19 +212,16 @@ func (vm *vm) exitBlock() {
 }
 func (vm *vm) clearBlock(cf *controlFrame) {
 	results := vm.popU64s(len(cf.bt.ResultTypes))
-	for vm.stackSize() > cf.bp {
-		vm.popU64()
-	}
+	vm.popU64s(vm.stackSize() - cf.bp)
 	vm.pushU64s(results)
 	if cf.opcode == binary.Call && vm.controlDepth() > 0 {
-		vm.local0Idx = uint32(vm.topFuncFrame().bp)
+		lastCallFrame, _ := vm.topCallFrame()
+		vm.local0Idx = uint32(lastCallFrame.bp)
 	}
 }
 func (vm *vm) resetBlock(cf *controlFrame) {
 	results := vm.popU64s(len(cf.bt.ParamTypes))
-	for vm.stackSize() > cf.bp {
-		vm.popU64()
-	}
+	vm.popU64s(vm.stackSize() - cf.bp)
 	vm.pushU64s(results)
 }
 
@@ -270,12 +267,12 @@ func (vm *vm) callFunc(f vmFunc, args []interface{}) []interface{} {
 func (vm *vm) loop() {
 	depth := vm.controlDepth()
 	for vm.controlDepth() >= depth {
-		frame := vm.topControlFrame()
-		if frame.pc == len(frame.instrs) {
+		cf := vm.topControlFrame()
+		if cf.pc == len(cf.instrs) {
 			vm.exitBlock()
 		} else {
-			instr := frame.instrs[frame.pc]
-			frame.pc++
+			instr := cf.instrs[cf.pc]
+			cf.pc++
 			vm.execInstr(instr)
 		}
 	}
@@ -390,7 +387,7 @@ func (vm *vm) CallFunc(name string, args ...interface{}) ([]interface{}, error) 
 		return nil, fmt.Errorf("function not found: " + name)
 	}
 
-	return vm.safeCallFunc(vm.funcs[fIdx], args)
+	return vm.funcs[fIdx].Call(args...)
 }
 
 func (vm *vm) getFunc(name string) (uint32, bool) {

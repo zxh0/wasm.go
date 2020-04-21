@@ -44,13 +44,13 @@ func (cs *controlStack) controlDepth() int {
 func (cs *controlStack) topControlFrame() *controlFrame {
 	return cs.frames[len(cs.frames)-1]
 }
-func (cs *controlStack) topFuncFrame() *controlFrame {
+func (cs *controlStack) topCallFrame() (*controlFrame, int) {
 	for n := len(cs.frames) - 1; n >= 0; n-- {
 		if cf := cs.frames[n]; cf.opcode == binary.Call {
-			return cf
+			return cf, len(cs.frames) - 1 - n
 		}
 	}
-	return nil
+	return nil, -1
 }
 
 func (cs *controlStack) pushControlFrame(cf *controlFrame) {
@@ -63,9 +63,8 @@ func (cs *controlStack) pushControlFrame(cf *controlFrame) {
 	}
 }
 func (cs *controlStack) popControlFrame() *controlFrame {
-	n := len(cs.frames)
-	cf := cs.frames[n-1]
-	cs.frames = cs.frames[:n-1]
+	cf := cs.frames[len(cs.frames)-1]
+	cs.frames = cs.frames[:len(cs.frames)-1]
 	if cf.opcode == binary.Call {
 		cs.callDepth--
 	}

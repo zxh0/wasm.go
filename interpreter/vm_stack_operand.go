@@ -20,8 +20,8 @@ func (s *operandStack) setOperand(idx uint32, val uint64) {
 	s.slots[idx] = val
 }
 
-func (s *operandStack) pushU64s(val []uint64) {
-	s.slots = append(s.slots, val...)
+func (s *operandStack) pushU64s(vals []uint64) {
+	s.slots = append(s.slots, vals...)
 }
 func (s *operandStack) popU64s(n int) []uint64 {
 	vals := s.slots[len(s.slots)-n:]
