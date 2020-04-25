@@ -17,7 +17,7 @@ const (
 	BlockTypeF64   BlockType = -4  // ()->(f64)
 	BlockTypeEmpty BlockType = -64 // ()->()
 
-	NoVal   = 0x40
+	//NoVal   = 0x40
 	FtTag   = 0x60
 	FuncRef = 0x70
 

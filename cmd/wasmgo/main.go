@@ -191,13 +191,13 @@ func execWat(filename string) error {
 		return err
 	}
 
-	iMap := map[string]instance.Instance{"env": newTestEnv()}
-	vm, err := interpreter.NewInstance(*m, iMap)
+	iMap := map[string]instance.Module{"env": newTestEnv()}
+	vm, err := interpreter.New(*m, iMap)
 	if err != nil {
 		return err
 	}
 
-	_, err = vm.CallFunc("main")
+	_, err = vm.InvokeFunc("main")
 	return err
 }
 
@@ -213,24 +213,24 @@ func execWasm(filename string) error {
 		return err
 	}
 
-	iMap := map[string]instance.Instance{"env": newTestEnv()}
-	vm, err := interpreter.NewInstance(module, iMap)
+	iMap := map[string]instance.Module{"env": newTestEnv()}
+	vm, err := interpreter.New(module, iMap)
 	if err != nil {
 		return err
 	}
 
-	_, err = vm.CallFunc("main")
+	_, err = vm.InvokeFunc("main")
 	return err
 }
 
 func execSO(filename string) error {
 	//fmt.Println("exec " + filename)
-	iMap := map[string]instance.Instance{"env": newTestEnv()}
+	iMap := map[string]instance.Module{"env": newTestEnv()}
 	i, err := aot.Load(filename, iMap)
 	if err != nil {
 		return err
 	}
 
-	_, err = i.CallFunc("main")
+	_, err = i.InvokeFunc("main")
 	return err
 }

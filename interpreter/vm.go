@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/zxh0/wasm.go/binary"
@@ -10,7 +9,9 @@ import (
 	"github.com/zxh0/wasm.go/validator"
 )
 
-var _ instance.Instance = (*vm)(nil)
+var _ instance.Module = (*vm)(nil)
+
+type WasmVal = instance.WasmVal
 
 type vm struct {
 	operandStack
@@ -26,7 +27,7 @@ type vm struct {
 	debug     bool
 }
 
-func NewInstance(m binary.Module, instances instance.Map) (inst instance.Instance, err error) {
+func New(m binary.Module, mm instance.Map) (inst instance.Module, err error) {
 	if err := validator.Validate(m); err != nil {
 		return nil, err
 	}
@@ -42,29 +43,33 @@ func NewInstance(m binary.Module, instances instance.Map) (inst instance.Instanc
 		}
 	}()
 
+	inst = newVM(m, mm)
+	return
+}
+
+func newVM(m binary.Module, mm instance.Map) *vm {
 	vm := &vm{module: m, debug: false}
-	vm.linkImports(instances)
+	vm.linkImports(mm)
 	vm.initFuncs()
 	vm.initTableAndMem()
 	vm.initGlobals()
 	vm.execStartFunc()
-	inst = vm
-	return
+	return vm
 }
 
 /* linking */
 
-func (vm *vm) linkImports(instances instance.Map) {
+func (vm *vm) linkImports(mm instance.Map) {
 	for _, imp := range vm.module.ImportSec {
-		if m := instances[imp.Module]; m == nil {
+		if m := mm[imp.Module]; m == nil {
 			panic(fmt.Errorf("module not found: " + imp.Module))
 		} else {
 			vm.linkImport(m, imp)
 		}
 	}
 }
-func (vm *vm) linkImport(m instance.Instance, imp binary.Import) {
-	exported := m.Get(imp.Name)
+func (vm *vm) linkImport(m instance.Module, imp binary.Import) {
+	exported := m.GetMember(imp.Name)
 	if exported == nil {
 		panic(fmt.Errorf("unknown import: %s.%s",
 			imp.Module, imp.Name))
@@ -76,7 +81,7 @@ func (vm *vm) linkImport(m instance.Instance, imp binary.Import) {
 		if imp.Desc.Tag == binary.ImportTagFunc {
 			expectedFT := vm.module.TypeSec[imp.Desc.FuncType]
 			typeMatched = isFuncTypeMatch(expectedFT, x.Type())
-			vm.funcs = append(vm.funcs, newExternalFunc(vm, expectedFT, x))
+			vm.funcs = append(vm.funcs, newExternalFunc(expectedFT, x))
 		}
 	case instance.Table:
 		if imp.Desc.Tag == binary.ImportTagTable {
@@ -104,10 +109,10 @@ func (vm *vm) linkImport(m instance.Instance, imp binary.Import) {
 /* init */
 
 func (vm *vm) initFuncs() {
-	for i, sigIdx := range vm.module.FuncSec {
-		sig := vm.module.TypeSec[sigIdx]
+	for i, ftIdx := range vm.module.FuncSec {
+		ft := vm.module.TypeSec[ftIdx]
 		code := vm.module.CodeSec[i]
-		vm.funcs = append(vm.funcs, newInternalFunc(vm, sig, code))
+		vm.funcs = append(vm.funcs, newInternalFunc(vm, ft, code))
 	}
 }
 
@@ -190,7 +195,7 @@ func (vm *vm) execConstExpr(expr []binary.Instruction) {
 func (vm *vm) execStartFunc() {
 	if vm.module.StartSec != nil {
 		idx := *vm.module.StartSec
-		vm.callFunc(vm.funcs[idx], nil)
+		vm.funcs[idx].call(nil)
 	}
 }
 
@@ -225,44 +230,12 @@ func (vm *vm) resetBlock(cf *controlFrame) {
 	vm.pushU64s(results)
 }
 
-/* func call */
-
 func (vm *vm) reset() {
 	vm.operandStack.reset()
 	vm.controlStack.reset()
 }
 
-func (vm *vm) safeCallFunc(f vmFunc,
-	args []interface{}) (results []interface{}, err error) {
-
-	defer func() {
-		if _err := recover(); _err != nil {
-			switch x := _err.(type) {
-			case error:
-				vm.reset()
-				err = x
-			default:
-				panic(err)
-			}
-		}
-	}()
-
-	if vm.debug {
-		fmt.Printf("safe call! %v\n", f) // TODO
-	}
-
-	results = vm.callFunc(f, args)
-	return
-}
-
-func (vm *vm) callFunc(f vmFunc, args []interface{}) []interface{} {
-	vm.pushArgs(f._type, args)
-	callFunc(vm, f)
-	if f.goFunc == nil {
-		vm.loop()
-	}
-	return vm.popResults(f._type)
-}
+/* loop */
 
 func (vm *vm) loop() {
 	depth := vm.controlDepth()
@@ -300,48 +273,9 @@ func (vm *vm) logInstr(instr binary.Instruction) {
 	}
 }
 
-func (vm *vm) pushArgs(ft binary.FuncType, args []interface{}) {
-	if len(ft.ParamTypes) != len(args) {
-		panic(fmt.Errorf("param count: %d, arg count: %d",
-			len(ft.ParamTypes), len(args)))
-	}
-	for i, vt := range ft.ParamTypes {
-		switch vt {
-		case binary.ValTypeI32:
-			vm.pushS32(args[i].(int32))
-		case binary.ValTypeI64:
-			vm.pushS64(args[i].(int64))
-		case binary.ValTypeF32:
-			vm.pushF32(args[i].(float32))
-		case binary.ValTypeF64:
-			vm.pushF64(args[i].(float64))
-		default:
-			panic("unreachable")
-		}
-	}
-}
-func (vm *vm) popResults(ft binary.FuncType) []interface{} {
-	results := make([]interface{}, len(ft.ResultTypes))
-	for n := len(ft.ResultTypes) - 1; n >= 0; n-- {
-		switch ft.ResultTypes[n] {
-		case binary.ValTypeI32:
-			results[n] = vm.popS32()
-		case binary.ValTypeI64:
-			results[n] = vm.popS64()
-		case binary.ValTypeF32:
-			results[n] = vm.popF32()
-		case binary.ValTypeF64:
-			results[n] = vm.popF64()
-		default:
-			panic("unreachable")
-		}
-	}
-	return results
-}
+/* instance.Module */
 
-/* instance.Instance */
-
-func (vm *vm) Get(name string) interface{} {
+func (vm *vm) GetMember(name string) interface{} {
 	for _, exp := range vm.module.ExportSec {
 		if exp.Name == name {
 			idx := exp.Desc.Idx
@@ -360,43 +294,33 @@ func (vm *vm) Get(name string) interface{} {
 	return nil
 }
 
-func (vm vm) GetGlobalValue(name string) (interface{}, error) {
-	for _, exp := range vm.module.ExportSec {
-		if exp.Name == name && exp.Desc.Tag == binary.ExportTagGlobal {
-			g := vm.globals[exp.Desc.Idx]
-			switch g.Type().ValType {
-			case binary.ValTypeI32:
-				return int32(uint32(g.Get())), nil
-			case binary.ValTypeI64:
-				return int64(g.Get()), nil
-			case binary.ValTypeF32:
-				return math.Float32frombits(uint32(g.Get())), nil
-			case binary.ValTypeF64:
-				return math.Float64frombits(g.Get()), nil
-			default:
-				panic("unreachable")
-			}
+func (vm *vm) InvokeFunc(name string, args ...WasmVal) ([]WasmVal, error) {
+	m := vm.GetMember(name)
+	if m != nil {
+		if f, ok := m.(instance.Function); ok {
+			return f.Call(args...)
+		}
+	}
+	return nil, fmt.Errorf("function not found: " + name)
+}
+func (vm vm) GetGlobalVal(name string) (WasmVal, error) {
+	m := vm.GetMember(name)
+	if m != nil {
+		if g, ok := m.(instance.Global); ok {
+			return g.Get(), nil
 		}
 	}
 	return nil, fmt.Errorf("global not found: " + name)
 }
-
-func (vm *vm) CallFunc(name string, args ...interface{}) ([]interface{}, error) {
-	fIdx, ok := vm.getFunc(name) // TODO
-	if !ok {
-		return nil, fmt.Errorf("function not found: " + name)
-	}
-
-	return vm.funcs[fIdx].Call(args...)
-}
-
-func (vm *vm) getFunc(name string) (uint32, bool) {
-	for _, exp := range vm.module.ExportSec {
-		if exp.Name == name && exp.Desc.Tag == binary.ExportTagFunc {
-			return exp.Desc.Idx, true
+func (vm vm) SetGlobalVal(name string, val WasmVal) error {
+	m := vm.GetMember(name)
+	if m != nil {
+		if g, ok := m.(instance.Global); ok {
+			g.Set(val)
+			return nil
 		}
 	}
-	return 0, false
+	return fmt.Errorf("global not found: " + name)
 }
 
 /* helpers */

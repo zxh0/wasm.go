@@ -213,10 +213,10 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 		c.printf("s%d = s%d // %s %d\n",
 			instr.Args, c.stackPtr-1, opname, instr.Args)
 	case binary.GlobalGet:
-		c.printf("s%d = m.globals[%d].Get() // %s %d\n",
+		c.printf("s%d = m.globals[%d].GetAsU64() // %s %d\n",
 			c.stackPush(), instr.Args, opname, instr.Args)
 	case binary.GlobalSet:
-		c.printf("m.globals[%d].Set(s%d) // %s %d\n",
+		c.printf("m.globals[%d].SetAsU64(s%d) // %s %d\n",
 			instr.Args, c.stackPtr-1, opname, instr.Args)
 		c.stackPtr--
 	case binary.I32Load, binary.F32Load:

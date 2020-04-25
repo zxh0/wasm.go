@@ -2,18 +2,20 @@ package instance
 
 import "github.com/zxh0/wasm.go/binary"
 
-type Map = map[string]Instance
-type GoFunc = func(args ...interface{}) ([]interface{}, error)
+type Map = map[string]Module
+type WasmVal = interface{}
+type GoFunc = func(args ...WasmVal) ([]WasmVal, error)
 
-type Instance interface {
-	Get(name string) interface{}
-	CallFunc(name string, args ...interface{}) ([]interface{}, error)
-	GetGlobalValue(name string) (interface{}, error)
+type Module interface {
+	GetMember(name string) interface{}
+	InvokeFunc(name string, args ...WasmVal) ([]WasmVal, error)
+	GetGlobalVal(name string) (WasmVal, error)
+	SetGlobalVal(name string, val WasmVal) error
 }
 
 type Function interface {
 	Type() binary.FuncType
-	Call(args ...interface{}) ([]interface{}, error)
+	Call(args ...WasmVal) ([]WasmVal, error)
 }
 
 type Table interface {
@@ -34,6 +36,8 @@ type Memory interface {
 
 type Global interface {
 	Type() binary.GlobalType
-	Get() uint64
-	Set(val uint64)
+	GetAsU64() uint64
+	SetAsU64(val uint64)
+	Get() WasmVal
+	Set(val WasmVal)
 }

@@ -75,25 +75,25 @@ func Instantiate(iMap instance.Map) (instance.Instance, error) {
 
 	for i, imp := range c.importedFuncs {
 		ft := c.module.TypeSec[imp.Desc.FuncType]
-		c.printf(`	m.importedFuncs[%d] = iMap["%s"].Get("%s").(instance.Function) // %s%s`,
+		c.printf(`	m.importedFuncs[%d] = iMap["%s"].GetAsU64("%s").(instance.Function) // %s%s`,
 			i, imp.Module, imp.Name, ft.GetSignature(), "\n")
 	}
 	if len(c.importedTables) > 0 {
-		c.printf(`	m.table = iMap["%s"].Get("%s").(instance.Table)%s`,
+		c.printf(`	m.table = iMap["%s"].GetAsU64("%s").(instance.Table)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.TableSec) > 0 {
 		c.printf("	m.table = interpreter.NewTable(%d, %d)\n",
 			c.module.TableSec[0].Limits.Min, c.module.TableSec[0].Limits.Max)
 	}
 	if len(c.importedMemories) > 0 {
-		c.printf(`	m.memory = iMap["%s"].Get("%s").(instance.Memory)%s`,
+		c.printf(`	m.memory = iMap["%s"].GetAsU64("%s").(instance.Memory)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.MemSec) > 0 {
 		c.printf("	m.memory = interpreter.NewMemory(%d, %d)\n",
 			c.module.MemSec[0].Min, c.module.MemSec[0].Max)
 	}
 	for i, imp := range c.importedGlobals {
-		c.printf(`	m.globals[%d] = iMap["%s"].Get("%s").(instance.Global)%s`,
+		c.printf(`	m.globals[%d] = iMap["%s"].GetAsU64("%s").(instance.Global)%s`,
 			i, imp.Module, imp.Name, "\n")
 	}
 	for i, g := range c.module.GlobalSec {
@@ -175,19 +175,19 @@ func (c *moduleCompiler) genInstanceImpl() {
 
 func (c *moduleCompiler) genGet() {
 	c.print(`// instance.Instance
-func (m *aotModule) Get(name string) interface{} {
+func (m *aotModule) GetAsU64(name string) interface{} {
 	panic("TODO")
 }`)
 }
 func (c *moduleCompiler) genGetGlobalVal() {
 	c.print(`
-func (m *aotModule) GetGlobalValue(name string) (interface{}, error) {
+func (m *aotModule) GetGlobalVal(name string) (interface{}, error) {
 	panic("TODO")
 }`)
 }
 func (c *moduleCompiler) genCallFunc() {
 	c.println("")
-	c.println(`func (m *aotModule) CallFunc(name string, args ...interface{}) (interface{}, error) {`)
+	c.println(`func (m *aotModule) InvokeFunc(name string, args ...interface{}) (interface{}, error) {`)
 	c.println("	switch name {")
 	for i, exp := range c.module.ExportSec {
 		c.printf("	case \"%s\": return m.exported%d(args...)\n", exp.Name, i)

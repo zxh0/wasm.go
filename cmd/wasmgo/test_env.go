@@ -3,20 +3,19 @@ package main
 import (
 	"fmt"
 
-	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
 )
 
-func newTestEnv() instance.Instance {
+func newTestEnv() instance.Module {
 	env := instance.NewNativeInstance()
-	env.RegisterFunc("assert_true", assertTrue, binary.ValTypeI32, binary.NoVal)
-	env.RegisterFunc("assert_false", assertFalse, binary.ValTypeI32, binary.NoVal)
-	env.RegisterFunc("assert_eq_i32", assertEqI32, binary.ValTypeI32, binary.ValTypeI32, binary.NoVal)
-	env.RegisterFunc("assert_eq_i64", assertEqI64, binary.ValTypeI64, binary.ValTypeI64, binary.NoVal)
-	env.RegisterFunc("assert_eq_f32", assertEqF32, binary.ValTypeF32, binary.ValTypeF32, binary.NoVal)
-	env.RegisterFunc("assert_eq_f64", assertEqF64, binary.ValTypeF64, binary.ValTypeF64, binary.NoVal)
-	env.RegisterFunc("print_i32", printI32, binary.ValTypeI32, binary.NoVal)
-	env.RegisterFunc("print_char", printChar, binary.ValTypeI32, binary.NoVal)
+	env.RegisterFunc("assert_true(i32)->()", assertTrue)
+	env.RegisterFunc("assert_false(i32)->()", assertFalse)
+	env.RegisterFunc("assert_eq_i32(i32,i32)->()", assertEqI32)
+	env.RegisterFunc("assert_eq_i64(i64,i64)->()", assertEqI64)
+	env.RegisterFunc("assert_eq_f32(f32,f32)->()", assertEqF32)
+	env.RegisterFunc("assert_eq_f64(f64,f64)->()", assertEqF64)
+	env.RegisterFunc("print_i32(i32)->()", printI32)
+	env.RegisterFunc("print_char(i32)->()", printChar)
 	return env
 }
 

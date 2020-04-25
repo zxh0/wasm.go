@@ -28,12 +28,19 @@ func (g *globalVar) Type() binary.GlobalType {
 	return g._type
 }
 
-func (g *globalVar) Get() uint64 {
+func (g *globalVar) GetAsU64() uint64 {
 	return g.val
 }
-func (g *globalVar) Set(val uint64) {
+func (g *globalVar) SetAsU64(val uint64) {
 	if g._type.Mut != 1 {
 		panic(errImmutableGlobal)
 	}
 	g.val = val
+}
+
+func (g *globalVar) Get() instance.WasmVal {
+	return wrapU64(g._type.ValType, g.val)
+}
+func (g *globalVar) Set(val instance.WasmVal) {
+	g.val = unwrapU64(g._type.ValType, val)
 }

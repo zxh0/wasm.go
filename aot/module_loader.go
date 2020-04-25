@@ -7,10 +7,10 @@ import (
 	"github.com/zxh0/wasm.go/instance"
 )
 
-type NewFn = func(instance.Map) (instance.Instance, error)
+type NewFn = func(instance.Map) (instance.Module, error)
 
 // load compiled module
-func Load(filename string, iMap instance.Map) (instance.Instance, error) {
+func Load(filename string, iMap instance.Map) (instance.Module, error) {
 	p, err := plugin.Open(filename)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func Load(filename string, iMap instance.Map) (instance.Instance, error) {
 
 	newFn, ok := f.(NewFn)
 	if !ok {
-		msg := "'Instantiate' is not 'func(instance.Map) (instance.Instance, error)'"
+		msg := "'Instantiate' is not 'func(instance.Map) (instance.Module, error)'"
 		return nil, errors.New(msg)
 	}
 

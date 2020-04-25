@@ -11,8 +11,8 @@ var _ WasmImpl = (*WasmInterpreter)(nil)
 
 type WasmImpl interface {
 	Validate(m binary.Module) error
-	Instantiate(m binary.Module, instances instance.Map) (instance.Instance, error)
-	InstantiateBin(data []byte, instances instance.Map) (instance.Instance, error)
+	Instantiate(m binary.Module, instances instance.Map) (instance.Module, error)
+	InstantiateBin(data []byte, instances instance.Map) (instance.Module, error)
 }
 
 type WasmInterpreter struct {
@@ -23,17 +23,17 @@ func (WasmInterpreter) Validate(m binary.Module) error {
 }
 
 func (WasmInterpreter) Instantiate(
-	m binary.Module, instances instance.Map) (instance.Instance, error) {
+	m binary.Module, instances instance.Map) (instance.Module, error) {
 
-	return interpreter.NewInstance(m, instances)
+	return interpreter.New(m, instances)
 }
 
 func (WasmInterpreter) InstantiateBin(
-	data []byte, instances instance.Map) (instance.Instance, error) {
+	data []byte, instances instance.Map) (instance.Module, error) {
 
 	m, err := binary.Decode(data)
 	if err != nil {
 		return nil, err
 	}
-	return interpreter.NewInstance(m, instances)
+	return interpreter.New(m, instances)
 }

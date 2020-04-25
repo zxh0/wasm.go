@@ -19,11 +19,11 @@ func localTee(vm *vm, args interface{}) {
 
 func globalGet(vm *vm, args interface{}) {
 	idx := args.(uint32)
-	val := vm.globals[idx].Get()
+	val := vm.globals[idx].GetAsU64()
 	vm.pushU64(val)
 }
 func globalSet(vm *vm, args interface{}) {
 	idx := args.(uint32)
 	val := vm.popU64()
-	vm.globals[idx].Set(val)
+	vm.globals[idx].SetAsU64(val)
 }

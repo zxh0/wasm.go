@@ -17,7 +17,7 @@ type nativeFunction struct {
 func (nf nativeFunction) Type() binary.FuncType {
 	return nf.t
 }
-func (nf nativeFunction) Call(args ...interface{}) ([]interface{}, error) {
+func (nf nativeFunction) Call(args ...WasmVal) ([]WasmVal, error) {
 	return nf.f(args...)
 }
 
@@ -27,7 +27,7 @@ func wrapNativeFunc(nf interface{}) (Function, error) {
 		return nil, err
 	}
 
-	f := func(args ...interface{}) ([]interface{}, error) {
+	f := func(args ...WasmVal) ([]WasmVal, error) {
 		return callNativeFunc(ft, nf, args...)
 	}
 
@@ -35,7 +35,7 @@ func wrapNativeFunc(nf interface{}) (Function, error) {
 }
 
 func callNativeFunc(ft binary.FuncType,
-	nf interface{}, args ...interface{}) ([]interface{}, error) {
+	nf interface{}, args ...WasmVal) ([]WasmVal, error) {
 
 	paramCount := len(ft.ParamTypes)
 	resultCount := len(ft.ResultTypes)

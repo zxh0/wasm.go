@@ -36,7 +36,7 @@ func TestGlobal(t *testing.T) {
 	instrTable[binary.GlobalSet](vm, uint32(0))
 	instrTable[binary.GlobalSet](vm, uint32(2))
 
-	require.Equal(t, uint64(200), vm.globals[0].Get())
-	require.Equal(t, uint64(300), vm.globals[1].Get())
-	require.Equal(t, uint64(100), vm.globals[2].Get())
+	require.Equal(t, uint64(200), vm.globals[0].GetAsU64())
+	require.Equal(t, uint64(300), vm.globals[1].GetAsU64())
+	require.Equal(t, uint64(100), vm.globals[2].GetAsU64())
 }

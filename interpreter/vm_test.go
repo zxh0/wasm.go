@@ -86,6 +86,6 @@ func TestGlobalVar(t *testing.T) {
 		ValType: binary.ValTypeI32,
 		Mut:     1,
 	}, 0)
-	g.Set(100)
-	require.Equal(t, uint64(100), g.Get())
+	g.SetAsU64(100)
+	require.Equal(t, uint64(100), g.GetAsU64())
 }

@@ -74,7 +74,7 @@ func call(vm *vm, args interface{}) {
 }
 
 func callFunc(vm *vm, f vmFunc) {
-	if f.goFunc != nil {
+	if f._func != nil {
 		callExternalFunc(vm, f)
 	} else {
 		callInternalFunc(vm, f)
@@ -83,46 +83,28 @@ func callFunc(vm *vm, f vmFunc) {
 
 func callExternalFunc(vm *vm, f vmFunc) {
 	args := popArgs(vm, f._type)
-	results, err := f.goFunc.Call(args...)
+	results, err := f._func.Call(args...)
 	if err != nil {
 		panic(err)
 	}
 	pushResults(vm, f._type, results)
 }
 
-func popArgs(vm *vm, sig binary.FuncType) []interface{} {
-	paramCount := len(sig.ParamTypes)
+func popArgs(vm *vm, ft binary.FuncType) []interface{} {
+	paramCount := len(ft.ParamTypes)
 	args := make([]interface{}, paramCount)
 	for i := paramCount - 1; i >= 0; i-- {
-		switch sig.ParamTypes[i] {
-		case binary.ValTypeI32:
-			args[i] = vm.popS32()
-		case binary.ValTypeI64:
-			args[i] = vm.popS64()
-		case binary.ValTypeF32:
-			args[i] = vm.popF32()
-		case binary.ValTypeF64:
-			args[i] = vm.popF64()
-		}
+		args[i] = wrapU64(ft.ParamTypes[i], vm.popU64())
 	}
 	return args
 }
 
-func pushResults(vm *vm, sig binary.FuncType, results []interface{}) {
-	if len(sig.ResultTypes) != len(results) {
+func pushResults(vm *vm, ft binary.FuncType, results []interface{}) {
+	if len(ft.ResultTypes) != len(results) {
 		panic("TODO")
 	}
 	for _, result := range results {
-		switch sig.ResultTypes[0] {
-		case binary.ValTypeI32:
-			vm.pushS32(result.(int32))
-		case binary.ValTypeI64:
-			vm.pushS64(result.(int64))
-		case binary.ValTypeF32:
-			vm.pushF32(result.(float32))
-		case binary.ValTypeF64:
-			vm.pushF64(result.(float64))
-		}
+		vm.pushU64(unwrapU64(ft.ResultTypes[0], result))
 	}
 }
 
@@ -166,7 +148,7 @@ func callIndirect(vm *vm, args interface{}) {
 
 	// optimize internal func call
 	if _f, ok := f.(vmFunc); ok {
-		if _f.goFunc == nil && _f.vm == vm {
+		if _f._func == nil && _f.vm == vm {
 			callInternalFunc(vm, _f)
 			return
 		}

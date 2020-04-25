@@ -13,8 +13,8 @@ import (
 type wastTester struct {
 	script    *text.Script
 	wasmImpl  WasmImpl
-	instances map[string]instance.Instance
-	instance  instance.Instance
+	instances map[string]instance.Module
+	instance  instance.Module
 }
 
 func TestWast(script *text.Script) error {
@@ -25,7 +25,7 @@ func newWastTester(script *text.Script) *wastTester {
 	return &wastTester{
 		script:   script,
 		wasmImpl: WasmInterpreter{},
-		instances: map[string]instance.Instance{
+		instances: map[string]instance.Module{
 			"spectest": newSpecTestInstance(),
 		},
 	}
@@ -128,10 +128,10 @@ func (t *wastTester) runAction(a *text.Action) ([]interface{}, error) {
 	switch a.Kind {
 	case text.ActionInvoke:
 		//println("invoke " + a.ItemName)
-		return _i.CallFunc(a.ItemName, getConsts(a.Expr)...)
+		return _i.InvokeFunc(a.ItemName, getConsts(a.Expr)...)
 	case text.ActionGet:
 		//println("get " + a.ItemName)
-		val, err := _i.GetGlobalValue(a.ItemName)
+		val, err := _i.GetGlobalVal(a.ItemName)
 		return []interface{}{val}, err
 	default:
 		panic("unreachable")

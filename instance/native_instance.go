@@ -1,10 +1,6 @@
 package instance
 
-import (
-	"github.com/zxh0/wasm.go/binary"
-)
-
-var _ Instance = (*NativeInstance)(nil)
+var _ Module = (*NativeInstance)(nil)
 
 type NativeInstance struct {
 	exported map[string]interface{}
@@ -16,33 +12,27 @@ func NewNativeInstance() *NativeInstance {
 	}
 }
 
-func (n *NativeInstance) RegisterFunc(name string,
-	f GoFunc, paramsAndResult ...binary.ValType) {
-
-	ft := binary.FuncType{}
-	if len(paramsAndResult) > 0 {
-		ft.ParamTypes = paramsAndResult[:len(paramsAndResult)-1]
-		rt := paramsAndResult[len(paramsAndResult)-1]
-		if rt != binary.NoVal {
-			ft.ResultTypes = []binary.ValType{rt}
-		}
-	}
-
-	n.exported[name] = nativeFunction{t: ft, f: f}
+func (n *NativeInstance) RegisterFunc(nameAndSig string, f GoFunc) {
+	name, sig := parseNameAndSig(nameAndSig)
+	n.exported[name] = nativeFunction{t: sig, f: f}
 }
 
 func (n *NativeInstance) Register(name string, x interface{}) {
 	n.exported[name] = x
 }
 
-func (n *NativeInstance) Get(name string) interface{} {
+func (n *NativeInstance) GetMember(name string) interface{} {
 	return n.exported[name]
 }
 
-func (n *NativeInstance) CallFunc(name string, args ...interface{}) ([]interface{}, error) {
+func (n *NativeInstance) InvokeFunc(name string, args ...WasmVal) ([]WasmVal, error) {
 	return n.exported[name].(Function).Call(args...) // TODO
 }
 
-func (n *NativeInstance) GetGlobalValue(name string) (interface{}, error) {
+func (n *NativeInstance) GetGlobalVal(name string) (WasmVal, error) {
 	return n.exported[name].(Global).Get(), nil // TODO
+}
+func (n *NativeInstance) SetGlobalVal(name string, val WasmVal) error {
+	n.exported[name].(Global).Set(val) // TODO
+	return nil
 }
