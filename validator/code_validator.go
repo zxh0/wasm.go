@@ -18,9 +18,9 @@ const (
 	Unknown = 0
 
 	I32 = binary.ValTypeI32
-	F64 = binary.ValTypeF64
 	I64 = binary.ValTypeI64
 	F32 = binary.ValTypeF32
+	F64 = binary.ValTypeF64
 )
 
 type valType = byte
@@ -29,9 +29,10 @@ type ctrlStack = []ctrlFrame
 
 /*
 type ctrl_frame = {
-  opcode : opcode
+  opcode      : opcode
   start_types : list(val_type)
-  end_types : list(val_type) height : nat
+  end_types   : list(val_type)
+  height      : nat
   unreachable : bool
 }
 */
@@ -85,6 +86,24 @@ func (cv *codeValidator) getInstrPath() string {
 		path += cv.instrPath[i]
 	}
 	return path
+}
+
+/* ctrl_frame */
+
+/*
+func label_types(frame : ctrl_frame) : list(val_types) =
+  return (
+    if frame.opcode == loop then
+      frame.start_types
+    else
+      frame.end_types
+  )
+*/
+func (frame ctrlFrame) labelTypes() []valType {
+	if frame.opcode == binary.Loop {
+		return frame.startTypes
+	}
+	return frame.endTypes
 }
 
 /* operand stack */
@@ -209,22 +228,6 @@ func (cv *codeValidator) popCtrl() ctrlFrame {
 }
 
 /*
-func label_types(frame : ctrl_frame) : list(val_types) =
-  return (
-    if frame.opcode == loop then
-      frame.start_types
-    else
-      frame.end_types
-  )
-*/
-func (cv *codeValidator) labelTypes(frame ctrlFrame) []valType {
-	if frame.opcode == binary.Loop {
-		return frame.startTypes
-	}
-	return frame.endTypes
-}
-
-/*
 func unreachable() =
   opds.resize(ctrls[0].height)
   ctrls[0].unreachable := true
@@ -344,7 +347,7 @@ func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 		if len(cv.ctrls) < n {
 			cv.error("unknown label")
 		}
-		cv.popOpds(cv.labelTypes(cv.getCtrl(n)))
+		cv.popOpds(cv.getCtrl(n).labelTypes())
 		cv.unreachable()
 	case binary.BrIf:
 		n := int(instr.Args.(uint32))
@@ -352,8 +355,8 @@ func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 			cv.error("unknown label")
 		}
 		cv.popI32()
-		cv.popOpds(cv.labelTypes(cv.getCtrl(n)))
-		cv.pushOpds(cv.labelTypes(cv.getCtrl(n)))
+		cv.popOpds(cv.getCtrl(n).labelTypes())
+		cv.pushOpds(cv.getCtrl(n).labelTypes())
 	case binary.BrTable:
 		brTableArgs := instr.Args.(binary.BrTableArgs)
 		m := int(brTableArgs.Default)
@@ -364,18 +367,18 @@ func (cv *codeValidator) validateInstr(instr binary.Instruction) {
 			if len(cv.ctrls) < int(n) {
 				cv.error("unknown label")
 			}
-			t1 := cv.labelTypes(cv.getCtrl(int(n)))
-			t2 := cv.labelTypes(cv.getCtrl(m))
+			t1 := cv.getCtrl(int(n)).labelTypes()
+			t2 := cv.getCtrl(m).labelTypes()
 			if !isValTypesEq(t1, t2) {
 				cv.error("type mismatch")
 			}
 		}
 		cv.popI32()
-		cv.popOpds(cv.labelTypes(cv.getCtrl(m)))
+		cv.popOpds(cv.getCtrl(m).labelTypes())
 		cv.unreachable()
 	case binary.Return:
 		n := len(cv.ctrls) - 1
-		cv.popOpds(cv.labelTypes(cv.getCtrl(n)))
+		cv.popOpds(cv.getCtrl(n).labelTypes())
 		cv.unreachable()
 	case binary.Call:
 		fIdx := instr.Args.(uint32)

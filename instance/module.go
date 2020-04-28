@@ -2,9 +2,8 @@ package instance
 
 import "github.com/zxh0/wasm.go/binary"
 
-type Map = map[string]Module
 type WasmVal = interface{}
-type GoFunc = func(args ...WasmVal) ([]WasmVal, error)
+type Map = map[string]Module
 
 type Module interface {
 	GetMember(name string) interface{}

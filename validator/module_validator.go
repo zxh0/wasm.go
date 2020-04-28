@@ -32,7 +32,6 @@ func Validate(module binary.Module) (err error) {
 }
 
 func (v *moduleValidator) validate() {
-	//v.validateTypeSec()
 	v.validateImportSec()
 	v.validateFuncSec()
 	v.validateTableSec()
@@ -45,13 +44,6 @@ func (v *moduleValidator) validate() {
 	v.validateDataSec()
 }
 
-func (v *moduleValidator) validateTypeSec() {
-	for i, ft := range v.module.TypeSec {
-		if len(ft.ResultTypes) > 1 {
-			panic(fmt.Errorf("type[%d]: invalid result arity", i))
-		}
-	}
-}
 func (v *moduleValidator) validateImportSec() {
 	for i, imp := range v.module.ImportSec {
 		switch imp.Desc.Tag {
@@ -300,7 +292,7 @@ func (v *moduleValidator) getFuncType(fIdx int) (binary.FuncType, bool) {
 }
 
 func validateTableType(limits binary.Limits) string {
-	return validateLimits(limits, 1<<31, "table")
+	return validateLimits(limits, (1<<32)-1, "table")
 }
 func validateMemoryType(limits binary.Limits) string {
 	return validateLimits(limits, 1<<16, "mem")
