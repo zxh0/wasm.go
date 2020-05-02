@@ -18,8 +18,8 @@ type vm struct {
 	controlStack
 
 	module  binary.Module
-	memory  instance.Memory
 	table   instance.Table
+	memory  instance.Memory
 	globals []instance.Global
 	funcs   []vmFunc
 

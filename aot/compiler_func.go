@@ -16,5 +16,12 @@ func (c *funcCompiler) genParams(paramCount int) {
 }
 
 func (c *funcCompiler) genResults(resultCount int) {
-	c.printIf(resultCount == 1, " uint64", "")
+	if resultCount > 0 {
+		c.printIf(resultCount > 1, " (", " ")
+		for i := 0; i < resultCount; i++ {
+			c.printIf(i > 0, ", ", "")
+			c.printf("uint64")
+		}
+		c.printIf(resultCount > 1, ")", "")
+	}
 }

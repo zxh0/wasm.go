@@ -32,6 +32,7 @@ package main
 
 import (
 	gobin "encoding/binary"
+	"fmt"
 	"math"
 	"math/bits"
 
@@ -57,7 +58,7 @@ func (c *moduleCompiler) genDummy() {
 func dummy() {
 	_ = bits.Add
 	_ = binary.Decode
-	_ = interpreter.NewInstance
+	_ = interpreter.New
 }
 `)
 }
@@ -66,7 +67,7 @@ func (c *moduleCompiler) genNew() {
 	funcCount := len(c.importedFuncs)
 	globalCount := len(c.importedGlobals) + len(c.module.GlobalSec)
 	c.printf(`
-func Instantiate(iMap instance.Map) (instance.Instance, error) {
+func Instantiate(mm instance.Map) (instance.Module, error) {
 	m := &aotModule{
 		importedFuncs: make([]instance.Function, %d),
 		globals:       make([]instance.Global, %d),
@@ -75,25 +76,25 @@ func Instantiate(iMap instance.Map) (instance.Instance, error) {
 
 	for i, imp := range c.importedFuncs {
 		ft := c.module.TypeSec[imp.Desc.FuncType]
-		c.printf(`	m.importedFuncs[%d] = iMap["%s"].GetAsU64("%s").(instance.Function) // %s%s`,
+		c.printf(`	m.importedFuncs[%d] = mm["%s"].GetMember("%s").(instance.Function) // %s%s`,
 			i, imp.Module, imp.Name, ft.GetSignature(), "\n")
 	}
 	if len(c.importedTables) > 0 {
-		c.printf(`	m.table = iMap["%s"].GetAsU64("%s").(instance.Table)%s`,
+		c.printf(`	m.table = mm["%s"].GetMember("%s").(instance.Table)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.TableSec) > 0 {
 		c.printf("	m.table = interpreter.NewTable(%d, %d)\n",
 			c.module.TableSec[0].Limits.Min, c.module.TableSec[0].Limits.Max)
 	}
 	if len(c.importedMemories) > 0 {
-		c.printf(`	m.memory = iMap["%s"].GetAsU64("%s").(instance.Memory)%s`,
+		c.printf(`	m.memory = mm["%s"].GetMember("%s").(instance.Memory)%s`,
 			c.importedTables[0].Module, c.importedTables[0].Name, "\n")
 	} else if len(c.module.MemSec) > 0 {
 		c.printf("	m.memory = interpreter.NewMemory(%d, %d)\n",
 			c.module.MemSec[0].Min, c.module.MemSec[0].Max)
 	}
 	for i, imp := range c.importedGlobals {
-		c.printf(`	m.globals[%d] = iMap["%s"].GetAsU64("%s").(instance.Global)%s`,
+		c.printf(`	m.globals[%d] = mm["%s"].GetMember("%s").(instance.Global)%s`,
 			i, imp.Module, imp.Name, "\n")
 	}
 	for i, g := range c.module.GlobalSec {
@@ -168,31 +169,34 @@ func (c *moduleCompiler) genExportedFuncs() {
 }
 
 func (c *moduleCompiler) genInstanceImpl() {
-	c.genGet()
-	c.genGetGlobalVal()
-	c.genCallFunc()
+	c.genGetMember()
+	c.genAccGlobalVal()
+	c.genInvokeFunc()
 }
 
-func (c *moduleCompiler) genGet() {
+func (c *moduleCompiler) genGetMember() {
 	c.print(`// instance.Instance
-func (m *aotModule) GetAsU64(name string) interface{} {
+func (m *aotModule) GetMember(name string) interface{} {
 	panic("TODO")
 }`)
 }
-func (c *moduleCompiler) genGetGlobalVal() {
+func (c *moduleCompiler) genAccGlobalVal() {
 	c.print(`
 func (m *aotModule) GetGlobalVal(name string) (interface{}, error) {
 	panic("TODO")
+}
+func (m *aotModule) SetGlobalVal(name string, val interface{}) error {
+	panic("TODO")
 }`)
 }
-func (c *moduleCompiler) genCallFunc() {
+func (c *moduleCompiler) genInvokeFunc() {
 	c.println("")
-	c.println(`func (m *aotModule) InvokeFunc(name string, args ...interface{}) (interface{}, error) {`)
+	c.println(`func (m *aotModule) InvokeFunc(name string, args ...interface{}) ([]interface{}, error) {`)
 	c.println("	switch name {")
 	for i, exp := range c.module.ExportSec {
-		c.printf("	case \"%s\": return m.exported%d(args...)\n", exp.Name, i)
+		c.printf("	case \"%s\": return m.exported%d(args)\n", exp.Name, i)
 	}
-	c.println(`	default: panic("TODO")`)
+	c.println(`	default: return nil, fmt.Errorf("func not found: %s", name)`)
 	c.println("	}")
 	c.println("}")
 }

@@ -10,7 +10,7 @@ import (
 type NewFn = func(instance.Map) (instance.Module, error)
 
 // load compiled module
-func Load(filename string, iMap instance.Map) (instance.Module, error) {
+func Load(filename string, mm instance.Map) (instance.Module, error) {
 	p, err := plugin.Open(filename)
 	if err != nil {
 		return nil, err
@@ -27,5 +27,5 @@ func Load(filename string, iMap instance.Map) (instance.Module, error) {
 		return nil, errors.New(msg)
 	}
 
-	return newFn(iMap) // TODO
+	return newFn(mm) // TODO
 }

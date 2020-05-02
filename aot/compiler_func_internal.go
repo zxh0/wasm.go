@@ -15,6 +15,7 @@ type internalFuncCompiler struct {
 	stackMax   int
 	tmpIdx     int
 	blocks     []blockInfo
+	nResults   int
 }
 
 type blockInfo struct {
@@ -76,6 +77,7 @@ func (c *internalFuncCompiler) compile(idx int,
 	paramCount := len(ft.ParamTypes)
 	resultCount := len(ft.ResultTypes)
 	localCount := int(code.GetLocalCount())
+	c.nResults = resultCount
 
 	c.stackPtr = paramCount + localCount
 	c.stackMax = c.stackPtr
@@ -154,7 +156,13 @@ func (c *internalFuncCompiler) genFuncBody(code binary.Code, resultCount int) {
 	expr := analyzeBr(code)
 	c.emitBlock(expr, false, resultCount > 0)
 	if resultCount > 0 {
-		c.printf("\treturn s%d\n", c.stackPtr-1)
+		//c.printf("\treturn s%d\n", c.stackPtr-1)
+		c.print("\treturn ")
+		for i := c.nResults - 1; i >= 0; i-- {
+			c.printIf(i < c.nResults-1, ", ", "")
+			c.printf("s%d", c.stackPtr-1-i)
+		}
+		c.println(" // return!")
 	}
 }
 
@@ -220,39 +228,39 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 			instr.Args, c.stackPtr-1, opname, instr.Args)
 		c.stackPtr--
 	case binary.I32Load, binary.F32Load:
-		c.emitLoad(instr, "s%d = uint64(m.readU32(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU32(%d + s%d)) // %s\n")
 	case binary.I64Load, binary.F64Load:
-		c.emitLoad(instr, "s%d = m.readU64(s%d + %d) // %s\n")
+		c.emitLoad(instr, "s%d = m.readU64(%d + s%d) // %s\n")
 	case binary.I32Load8S:
-		c.emitLoad(instr, "s%d = uint64(int8(m.readU8(s%d + %d))) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(int8(m.readU8(%d + s%d))) // %s\n")
 	case binary.I32Load8U:
-		c.emitLoad(instr, "s%d = uint64(m.readU8(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU8(%d + s%d)) // %s\n")
 	case binary.I32Load16S:
-		c.emitLoad(instr, "s%d = uint64(int16(m.readU16(s%d + %d))) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(int16(m.readU16(%d + s%d))) // %s\n")
 	case binary.I32Load16U:
-		c.emitLoad(instr, "s%d = uint64(m.readU16(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU16(%d + s%d)) // %s\n")
 	case binary.I64Load8S:
-		c.emitLoad(instr, "s%d = uint64(int8(m.readU8(s%d + %d))) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(int8(m.readU8(%d + s%d))) // %s\n")
 	case binary.I64Load8U:
-		c.emitLoad(instr, "s%d = uint64(m.readU8(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU8(%d + s%d)) // %s\n")
 	case binary.I64Load16S:
-		c.emitLoad(instr, "s%d = uint64(int16(m.readU16(s%d + %d))) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(int16(m.readU16(%d + s%d))) // %s\n")
 	case binary.I64Load16U:
-		c.emitLoad(instr, "s%d = uint64(m.readU16(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU16(%d + s%d)) // %s\n")
 	case binary.I64Load32S:
-		c.emitLoad(instr, "s%d = uint64(int32(m.readU32(s%d + %d))) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(int32(m.readU32(%d + s%d))) // %s\n")
 	case binary.I64Load32U:
-		c.emitLoad(instr, "s%d = uint64(m.readU32(s%d + %d)) // %s\n")
+		c.emitLoad(instr, "s%d = uint64(m.readU32(%d + s%d)) // %s\n")
 	case binary.I32Store, binary.F32Store:
-		c.emitStore(instr, "m.writeU32(s%d + %d, uint32(s%d)) // %s\n")
+		c.emitStore(instr, "m.writeU32(%d + s%d, uint32(s%d)) // %s\n")
 	case binary.I64Store, binary.F64Store:
-		c.emitStore(instr, "m.writeU64(s%d + %d, s%d) // %s\n")
+		c.emitStore(instr, "m.writeU64(%d + s%d, s%d) // %s\n")
 	case binary.I32Store8, binary.I64Store8:
-		c.emitStore(instr, "m.writeU8(s%d + %d, byte(s%d)) // %s\n")
+		c.emitStore(instr, "m.writeU8(%d + s%d, byte(s%d)) // %s\n")
 	case binary.I32Store16, binary.I64Store16:
-		c.emitStore(instr, "m.writeU16(s%d + %d, uint16(s%d)) // %s\n")
+		c.emitStore(instr, "m.writeU16(%d + s%d, uint16(s%d)) // %s\n")
 	case binary.I64Store32:
-		c.emitStore(instr, "m.writeU32(s%d + %d, uint32(s%d)) // %s\n")
+		c.emitStore(instr, "m.writeU32(%d + s%d, uint32(s%d)) // %s\n")
 	case binary.MemorySize:
 		c.emitMemSize(opname)
 	case binary.MemoryGrow:
@@ -666,10 +674,15 @@ func (c *internalFuncCompiler) emitBrIf(labelIdx uint32) {
 func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
 	c.printIndents()
 	c.printf("// br_table %v %d\n", btArgs.Labels, btArgs.Default)
-	for i, label := range btArgs.Labels {
+	allLabels := append(btArgs.Labels, btArgs.Default)
+	for i, label := range allLabels {
 		c.printIndents()
 		c.printIf(i > 0, "} else ", "")
-		c.printf("if s%d == %d {\n", c.stackPtr-1, i)
+		if i < len(allLabels)-1 {
+			c.printf("if s%d == %d {\n", c.stackPtr-1, i)
+		} else {
+			c.println(" {")
+		}
 		c.printIndentsPlus(1)
 		n := len(c.blocks) - int(label) - 1
 		c.printIf(c.blocks[n].isLoop, "continue ", "break ")
@@ -679,23 +692,32 @@ func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
 	c.println("}")
 }
 func (c *internalFuncCompiler) emitReturn() {
-	c.printf("return s%d // return\n", c.stackPtr-1)
+	//c.printf("return s%d // return\n", c.stackPtr-1)
+	c.print("return ")
+	for i := c.nResults - 1; i >= 0; i-- {
+		c.printIf(i < c.nResults-1, ", ", "")
+		c.printf("s%d", c.stackPtr-1-i)
+	}
+	c.println(" // return")
 }
 
 func (c *internalFuncCompiler) emitCall(funcIdx int) {
 	ft := c.moduleInfo.getFuncType(funcIdx)
+	resultCount := len(ft.ResultTypes)
 	c.stackPtr -= len(ft.ParamTypes)
-	if len(ft.ResultTypes) > 0 {
-		c.printf("s%d = ", c.stackPtr)
+	if resultCount > 0 {
+		for i := 0; i < resultCount; i++ {
+			c.printIf(i > 0, ", ", "")
+			c.printf("s%d", c.stackPtr+i)
+		}
+		c.print(" = ")
 	}
 	c.printf("m.f%d(", funcIdx)
 	for i := range ft.ParamTypes {
 		c.printIf(i > 0, ", ", "")
 		c.printf("s%d", c.stackPtr+i)
 	}
-	if len(ft.ResultTypes) > 0 {
-		c.stackPtr++
-	}
+	c.stackPtr += resultCount
 	c.printf(") // call func#%d\n", funcIdx)
 }
 func (c *internalFuncCompiler) emitCallIndirect(typeIdx int) {
@@ -703,8 +725,9 @@ func (c *internalFuncCompiler) emitCallIndirect(typeIdx int) {
 	c.stackPop()
 
 	ft := c.moduleInfo.module.TypeSec[typeIdx]
+	resultCount := len(ft.ResultTypes)
 	c.stackPtr -= len(ft.ParamTypes)
-	if len(ft.ResultTypes) > 0 {
+	if resultCount > 0 {
 		c.printf("t%d, _ := ", c.tmpIdx)
 		c.tmpIdx++
 	}
@@ -716,29 +739,31 @@ func (c *internalFuncCompiler) emitCallIndirect(typeIdx int) {
 	}
 	c.printf(") // call_indirect type#%d\n", typeIdx)
 
-	if len(ft.ResultTypes) > 0 {
+	if resultCount > 0 {
 		c.printIndents()
-		switch ft.ResultTypes[0] {
-		case binary.ValTypeI32:
-			c.printf("s%d = uint64(t%d.(int32))\n", c.stackPtr, c.tmpIdx-1)
-		case binary.ValTypeI64:
-			c.printf("s%d = uint64(t%d.(int64))\n", c.stackPtr, c.tmpIdx-1)
-		case binary.ValTypeF32:
-			c.printf("s%d = _u32(t%d.(float32))\n", c.stackPtr, c.tmpIdx-1)
-		case binary.ValTypeF64:
-			c.printf("s%d = _u64(t%d.(float64))\n", c.stackPtr, c.tmpIdx-1)
+		for i, vt := range ft.ResultTypes {
+			switch vt {
+			case binary.ValTypeI32:
+				c.printf("s%d = uint64(t%d[%d].(int32))\n", c.stackPtr, c.tmpIdx-1, i)
+			case binary.ValTypeI64:
+				c.printf("s%d = uint64(t%d[%d].(int64))\n", c.stackPtr, c.tmpIdx-1, i)
+			case binary.ValTypeF32:
+				c.printf("s%d = _u32(t%d[%d].(float32))\n", c.stackPtr, c.tmpIdx-1, i)
+			case binary.ValTypeF64:
+				c.printf("s%d = _u64(t%d[%d].(float64))\n", c.stackPtr, c.tmpIdx-1, i)
+			}
+			c.stackPtr++
 		}
-		c.stackPtr++
 	}
 }
 
 func (c *internalFuncCompiler) emitLoad(instr binary.Instruction, tmpl string) {
-	// s%d = m.readU32(s%d + %d) // %s\n
-	c.printf(tmpl, c.stackPtr-1, c.stackPtr-1, instr.Args.(binary.MemArg).Offset, instr.GetOpname())
+	// s%d = m.readU32(%d + s%d) // %s\n
+	c.printf(tmpl, c.stackPtr-1, instr.Args.(binary.MemArg).Offset, c.stackPtr-1, instr.GetOpname())
 }
 func (c *internalFuncCompiler) emitStore(instr binary.Instruction, tmpl string) {
-	// m.writeU32(s%d + %d, uint32(s%d)) // %s\n
-	c.printf(tmpl, c.stackPtr-2, instr.Args.(binary.MemArg).Offset, c.stackPtr-1, instr.GetOpname())
+	// m.writeU32(%d + s%d, uint32(s%d)) // %s\n
+	c.printf(tmpl, instr.Args.(binary.MemArg).Offset, c.stackPtr-2, c.stackPtr-1, instr.GetOpname())
 	c.stackPtr -= 2
 }
 func (c *internalFuncCompiler) emitMemSize(opname string) {
