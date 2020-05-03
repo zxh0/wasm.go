@@ -15,6 +15,7 @@ type internalFuncCompiler struct {
 	stackMax   int
 	tmpIdx     int
 	blocks     []blockInfo
+	cntByDepth map[int]int // blockDepth -> blockCount
 	nResults   int
 }
 
@@ -28,6 +29,7 @@ func newInternalFuncCompiler(moduleInfo moduleInfo) *internalFuncCompiler {
 	return &internalFuncCompiler{
 		funcCompiler: newFuncCompiler(),
 		moduleInfo:   moduleInfo,
+		cntByDepth:   map[int]int{},
 	}
 }
 
@@ -63,12 +65,22 @@ func (c *internalFuncCompiler) enterBlock(isLoop, hasResult bool) {
 		hasResult: hasResult,
 		stackPtr:  c.stackPtr,
 	})
+	depth := c.blockDepth() - 1
+	if cnt, found := c.cntByDepth[depth]; !found {
+		c.cntByDepth[depth] = 0
+	} else {
+		c.cntByDepth[depth] = cnt + 1
+	}
 }
 func (c *internalFuncCompiler) exitBlock() {
 	c.blocks = c.blocks[:len(c.blocks)-1]
 }
 func (c *internalFuncCompiler) blockDepth() int {
 	return len(c.blocks)
+}
+
+func (c *internalFuncCompiler) getLabelName(depth int) string {
+	return fmt.Sprintf("_l%d_%d", depth, c.cntByDepth[depth])
 }
 
 func (c *internalFuncCompiler) compile(idx int,
@@ -582,24 +594,24 @@ l0: for {
 */
 func (c *internalFuncCompiler) emitBlock(expr []binary.Instruction, isLoop, hasResult bool) {
 	c.printIndents()
-	if isBrTarget(expr) {
-		c.printf("_l%d: for {\n", c.blockDepth())
-	} else {
-		c.printf("{ // _l%d\n", c.blockDepth())
-	}
 	c.enterBlock(isLoop, hasResult)
+	if isBrTarget(expr) {
+		c.printf("%s: for {\n", c.getLabelName(c.blockDepth()-1))
+	} else {
+		c.printf("{ // %s\n", c.getLabelName(c.blockDepth()-1))
+	}
 	for _, instr := range expr {
 		c.emitInstr(instr)
 	}
 	c.exitBlock()
 	if isBrTarget(expr) {
 		c.printIndentsPlus(1)
-		c.printf("break _l%d\n", c.blockDepth())
+		c.printf("break %s\n", c.getLabelName(c.blockDepth()))
 		c.printIndents()
-		c.printf("} // end of _l%d\n", c.blockDepth())
+		c.printf("} // end of %s\n", c.getLabelName(c.blockDepth()))
 	} else {
 		c.printIndents()
-		c.printf("} // end of _l%d\n", c.blockDepth())
+		c.printf("} // end of %s\n", c.getLabelName(c.blockDepth()))
 	}
 }
 
@@ -624,12 +636,12 @@ l0: for {
 }
 */
 func (c *internalFuncCompiler) emitIf(ifArgs binary.IfArgs) {
-	if isBrTarget(ifArgs.Instrs1) {
-		c.printIndents()
-		c.printf("_l%d: for {\n", c.blockDepth()-1)
-	}
 	rt := c.moduleInfo.module.GetResultTypes(ifArgs.BT)
 	c.enterBlock(false, len(rt) > 0)
+	if isBrTarget(ifArgs.Instrs1) {
+		c.printIndentsPlus(-1)
+		c.printf("%s: for {\n", c.getLabelName(c.blockDepth()-1))
+	}
 
 	c.printIndentsPlus(-1)
 	c.printf("if s%d > 0 { // if@%d\n", c.stackPtr-1, len(c.blocks)-1)
@@ -652,14 +664,14 @@ func (c *internalFuncCompiler) emitIf(ifArgs binary.IfArgs) {
 	c.exitBlock()
 	if isBrTarget(ifArgs.Instrs1) {
 		c.printIndents()
-		c.printf("break } // end of _l%d\n", c.blockDepth()-1)
+		c.printf("break } // end of %s\n", c.getLabelName(c.blockDepth()-1))
 	}
 }
 
 func (c *internalFuncCompiler) emitBr(labelIdx uint32) {
 	n := len(c.blocks) - int(labelIdx) - 1
 	c.printIf(c.blocks[n].isLoop, "continue ", "break ")
-	c.printf("_l%d // br %d\n", n, labelIdx)
+	c.printf("%s // br %d\n", c.getLabelName(n), labelIdx)
 }
 func (c *internalFuncCompiler) emitBrIf(labelIdx uint32) {
 	n := len(c.blocks) - int(labelIdx) - 1
@@ -667,8 +679,8 @@ func (c *internalFuncCompiler) emitBrIf(labelIdx uint32) {
 	if c.blocks[n].isLoop {
 		br = "continue"
 	}
-	c.printf("if s%d != 0 { %s _l%d } // br_if %d\n",
-		c.stackPtr-1, br, n, labelIdx)
+	c.printf("if s%d != 0 { %s %s } // br_if %d\n",
+		c.stackPtr-1, br, c.getLabelName(n), labelIdx)
 	c.stackPop()
 }
 func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
@@ -686,7 +698,7 @@ func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
 		c.printIndentsPlus(1)
 		n := len(c.blocks) - int(label) - 1
 		c.printIf(c.blocks[n].isLoop, "continue ", "break ")
-		c.printf("_l%d //\n", n)
+		c.printf("%s //\n", c.getLabelName(n))
 	}
 	c.printIndents()
 	c.println("}")
