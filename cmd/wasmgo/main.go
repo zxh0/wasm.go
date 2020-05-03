@@ -13,7 +13,6 @@ import (
 	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
 	"github.com/zxh0/wasm.go/interpreter"
-	"github.com/zxh0/wasm.go/jit"
 	"github.com/zxh0/wasm.go/spectest"
 	"github.com/zxh0/wasm.go/text"
 	"github.com/zxh0/wasm.go/validator"
@@ -36,7 +35,6 @@ const (
 	flagNameCompile = "compile"
 	flagNameDump    = "dump"
 	flagNameExec    = "exec"
-	flagNameLLVM    = "llvm"
 	flagNameTest    = "test"
 )
 
@@ -57,7 +55,6 @@ func main() {
 			boolFlag(flagNameDump, "D", "dump .wasm file", false),
 			boolFlag(flagNameExec, "E", "execute .wasm file", true),
 			boolFlag(flagNameCompile, "K", "compile .wat file", false),
-			boolFlag(flagNameLLVM, "L", "compile .wasm file to LLVM IR", false),
 			boolFlag(flagNameTest, "T", "test .wast file", false),
 		},
 		CustomAppHelpTemplate: appHelpTemplate,
@@ -71,8 +68,6 @@ func main() {
 				return dumpWasm(filename)
 			} else if ctx.Bool(flagNameCompile) {
 				return compileWatToWasm(filename)
-			} else if ctx.Bool(flagNameLLVM) {
-				return compileWasmToLLVM(filename)
 			} else if ctx.Bool(flagNameTest) {
 				return testWast(filename)
 			} else {
@@ -157,16 +152,6 @@ func compileWasmToGo(filename string) error {
 	} else {
 		aot.Compile(m)
 	}
-	return nil
-}
-
-func compileWasmToLLVM(filename string) error {
-	module, err := binary.DecodeFile(filename)
-	if err != nil {
-		return err
-	}
-	// TODO
-	jit.Compile(module)
 	return nil
 }
 
