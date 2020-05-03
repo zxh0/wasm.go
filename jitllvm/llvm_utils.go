@@ -1,6 +1,6 @@
 // +build jit
 
-package jit
+package jitllvm
 
 import (
 	"github.com/tinygo-org/go-llvm"

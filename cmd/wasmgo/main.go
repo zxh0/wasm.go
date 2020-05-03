@@ -13,7 +13,7 @@ import (
 	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
 	"github.com/zxh0/wasm.go/interpreter"
-	"github.com/zxh0/wasm.go/jit"
+	"github.com/zxh0/wasm.go/jitllvm"
 	"github.com/zxh0/wasm.go/spectest"
 	"github.com/zxh0/wasm.go/text"
 	"github.com/zxh0/wasm.go/validator"
@@ -166,7 +166,7 @@ func compileWasmToLLVM(filename string) error {
 		return err
 	}
 	// TODO
-	jit.Compile(module)
+	jitllvm.Compile(module)
 	return nil
 }
 

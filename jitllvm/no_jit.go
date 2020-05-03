@@ -1,6 +1,6 @@
 // +build !jit
 
-package jit
+package jitllvm
 
 import (
 	"fmt"
