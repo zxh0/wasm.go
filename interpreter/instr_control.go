@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"github.com/zxh0/wasm.go/binary"
+	"github.com/zxh0/wasm.go/jitgoloader"
 )
 
 func unreachable(vm *vm, _ interface{}) {
@@ -69,7 +70,25 @@ func _return(vm *vm, _ interface{}) {
 }
 
 func call(vm *vm, args interface{}) {
-	f := vm.funcs[args.(uint32)]
+	idx := args.(uint32)
+	f := vm.funcs[idx]
+	if vm.jitThreshold > 0 && f._func == nil && f.cc >= 0 && f.f1 == nil {
+		vm.funcs[idx].cc += 1
+		if f.cc > vm.jitThreshold {
+			// TODO: change to async
+			f1, err := jitgoloader.CompileFunc(vm.module, f.code, f._type, int(idx))
+			if err != nil {
+				vm.funcs[idx].cc = -1
+			} else {
+				vm.funcs[idx].f1 = f1
+			}
+		}
+		if f.f1 != nil {
+			vm.pushU64(f.f1(vm.popU64()))
+			return
+		}
+	}
+
 	callFunc(vm, f)
 }
 

@@ -9,6 +9,8 @@ import (
 	"github.com/zxh0/wasm.go/validator"
 )
 
+const NoJIT = -1
+
 var _ instance.Module = (*vm)(nil)
 
 type WasmVal = instance.WasmVal
@@ -23,11 +25,16 @@ type vm struct {
 	globals []instance.Global
 	funcs   []vmFunc
 
-	local0Idx uint32
-	debug     bool
+	local0Idx    uint32
+	debug        bool
+	jitThreshold int
 }
 
 func New(m binary.Module, mm instance.Map) (inst instance.Module, err error) {
+	return NewJIT(m, mm, NoJIT)
+}
+
+func NewJIT(m binary.Module, mm instance.Map, jitThreshold int) (inst instance.Module, err error) {
 	if err := validator.Validate(m); err != nil {
 		return nil, err
 	}
@@ -43,12 +50,12 @@ func New(m binary.Module, mm instance.Map) (inst instance.Module, err error) {
 		}
 	}()
 
-	inst = newVM(m, mm)
+	inst = newVM(m, mm, jitThreshold)
 	return
 }
 
-func newVM(m binary.Module, mm instance.Map) *vm {
-	vm := &vm{module: m, debug: false}
+func newVM(m binary.Module, mm instance.Map, jitThreshold int) *vm {
+	vm := &vm{module: m, debug: false, jitThreshold: jitThreshold}
 	vm.linkImports(mm)
 	vm.initFuncs()
 	vm.initTableAndMem()
@@ -253,7 +260,9 @@ func (vm *vm) loop() {
 
 func (vm *vm) execInstr(instr binary.Instruction) {
 	vm.logInstr(instr)
-	instrTable[instr.Opcode](vm, instr.Args)
+	if instr.Opcode != 0xFF { // TODO
+		instrTable[instr.Opcode](vm, instr.Args)
+	}
 }
 
 func (vm *vm) logInstr(instr binary.Instruction) {

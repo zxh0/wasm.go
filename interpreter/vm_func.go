@@ -5,6 +5,7 @@ import (
 
 	"github.com/zxh0/wasm.go/binary"
 	"github.com/zxh0/wasm.go/instance"
+	"github.com/zxh0/wasm.go/jitgoloader"
 )
 
 var _ instance.Function = (*vmFunc)(nil)
@@ -14,6 +15,8 @@ type vmFunc struct {
 	_type binary.FuncType
 	code  binary.Code
 	_func instance.Function
+	cc    int // call count
+	f1    jitgoloader.CompiledFunc1
 }
 
 func newExternalFunc(ft binary.FuncType,

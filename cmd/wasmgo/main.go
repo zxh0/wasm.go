@@ -38,6 +38,7 @@ const (
 	flagNameExec    = "exec"
 	flagNameLLVM    = "llvm"
 	flagNameTest    = "test"
+	flagNameJIT     = "jit"
 )
 
 // wasmgo             file.wasm # exec
@@ -59,6 +60,7 @@ func main() {
 			boolFlag(flagNameCompile, "K", "compile .wat file", false),
 			boolFlag(flagNameLLVM, "L", "compile .wasm file to LLVM IR", false),
 			boolFlag(flagNameTest, "T", "test .wast file", false),
+			intFlag(flagNameJIT, "J", "jit threshold", -1),
 		},
 		CustomAppHelpTemplate: appHelpTemplate,
 		Action: func(ctx *cli.Context) error {
@@ -76,7 +78,7 @@ func main() {
 			} else if ctx.Bool(flagNameTest) {
 				return testWast(filename)
 			} else {
-				return execFile(filename)
+				return execFile(filename, ctx.Int(flagNameJIT))
 			}
 		},
 	}
@@ -88,6 +90,14 @@ func main() {
 
 func boolFlag(name, alias, usage string, value bool) cli.Flag {
 	return &cli.BoolFlag{
+		Name:    name,
+		Aliases: []string{alias},
+		Usage:   usage,
+		Value:   value,
+	}
+}
+func intFlag(name, alias, usage string, value int) cli.Flag {
+	return &cli.IntFlag{
 		Name:    name,
 		Aliases: []string{alias},
 		Usage:   usage,
@@ -170,12 +180,12 @@ func compileWasmToLLVM(filename string) error {
 	return nil
 }
 
-func execFile(filename string) error {
+func execFile(filename string, jitThreshold int) error {
 	if strings.HasSuffix(filename, ".wat") {
-		return execWat(filename)
+		return execWat(filename, jitThreshold)
 	}
 	if strings.HasSuffix(filename, ".wasm") {
-		return execWasm(filename)
+		return execWasm(filename, jitThreshold)
 	}
 	if strings.HasSuffix(filename, ".so") {
 		return execSO(filename)
@@ -184,7 +194,7 @@ func execFile(filename string) error {
 	return nil
 }
 
-func execWat(filename string) error {
+func execWat(filename string, jitThreshold int) error {
 	//fmt.Println("exec " + filename)
 	m, err := text.CompileModuleFile(filename)
 	if err != nil {
@@ -192,7 +202,7 @@ func execWat(filename string) error {
 	}
 
 	mm := map[string]instance.Module{"env": newTestEnv()}
-	vm, err := interpreter.New(*m, mm)
+	vm, err := interpreter.NewJIT(*m, mm, jitThreshold)
 	if err != nil {
 		return err
 	}
@@ -201,7 +211,7 @@ func execWat(filename string) error {
 	return err
 }
 
-func execWasm(filename string) error {
+func execWasm(filename string, jitThreshold int) error {
 	//fmt.Println("exec " + filename)
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -214,7 +224,7 @@ func execWasm(filename string) error {
 	}
 
 	mm := map[string]instance.Module{"env": newTestEnv()}
-	vm, err := interpreter.New(module, mm)
+	vm, err := interpreter.NewJIT(module, mm, jitThreshold)
 	if err != nil {
 		return err
 	}

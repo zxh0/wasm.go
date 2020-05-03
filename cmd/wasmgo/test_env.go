@@ -15,6 +15,7 @@ func newTestEnv() instance.Module {
 	env.RegisterFunc("assert_eq_f32(f32,f32)->()", assertEqF32)
 	env.RegisterFunc("assert_eq_f64(f64,f64)->()", assertEqF64)
 	env.RegisterFunc("print_i32(i32)->()", printI32)
+	env.RegisterFunc("print_i64(i64)->()", printI64)
 	env.RegisterFunc("print_char(i32)->()", printChar)
 	return env
 }
@@ -63,6 +64,10 @@ func assertEqF64(args []interface{}) ([]interface{}, error) {
 }
 
 func printI32(args []interface{}) ([]interface{}, error) {
+	fmt.Printf("%v\n", args[0])
+	return nil, nil
+}
+func printI64(args []interface{}) ([]interface{}, error) {
 	fmt.Printf("%v\n", args[0])
 	return nil, nil
 }
