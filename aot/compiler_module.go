@@ -194,7 +194,9 @@ func (c *moduleCompiler) genInvokeFunc() {
 	c.println(`func (m *aotModule) InvokeFunc(name string, args ...interface{}) ([]interface{}, error) {`)
 	c.println("	switch name {")
 	for i, exp := range c.module.ExportSec {
-		c.printf("	case \"%s\": return m.exported%d(args)\n", exp.Name, i)
+		if exp.Desc.Tag == binary.ImportTagFunc {
+			c.printf("	case \"%s\": return m.exported%d(args)\n", exp.Name, i)
+		}
 	}
 	c.println(`	default: return nil, fmt.Errorf("func not found: %s", name)`)
 	c.println("	}")

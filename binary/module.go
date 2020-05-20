@@ -129,10 +129,6 @@ type Data struct {
 	Init   []byte
 }
 
-// TODO
-func (module Module) GetResultTypes(bt BlockType) []ValType {
-	return module.GetBlockType(bt).ResultTypes
-}
 func (module Module) GetBlockType(bt BlockType) FuncType {
 	switch bt {
 	case BlockTypeI32:

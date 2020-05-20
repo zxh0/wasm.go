@@ -20,8 +20,9 @@ type internalFuncCompiler struct {
 }
 
 type blockInfo struct {
-	isLoop    bool
-	hasResult bool
+	opcode    byte
+	paramCnt  int
+	resultCnt int
 	stackPtr  int
 }
 
@@ -59,12 +60,17 @@ func (c *internalFuncCompiler) stackTop() int {
 	return c.stackPtr - 1
 }
 
-func (c *internalFuncCompiler) enterBlock(isLoop, hasResult bool) {
-	c.blocks = append(c.blocks, blockInfo{
-		isLoop:    isLoop,
-		hasResult: hasResult,
-		stackPtr:  c.stackPtr,
-	})
+func (c *internalFuncCompiler) enterBlock(opcode byte, bt binary.FuncType) {
+	bi := blockInfo{
+		opcode:    opcode,
+		paramCnt:  len(bt.ParamTypes),
+		resultCnt: len(bt.ResultTypes),
+		stackPtr:  c.stackPtr - len(bt.ParamTypes),
+	}
+	if opcode == binary.If {
+		bi.stackPtr--
+	}
+	c.blocks = append(c.blocks, bi)
 	depth := c.blockDepth() - 1
 	if cnt, found := c.cntByDepth[depth]; !found {
 		c.cntByDepth[depth] = 0
@@ -100,7 +106,7 @@ func (c *internalFuncCompiler) compile(idx int,
 	c.genResults(resultCount)
 	c.print(" {\n")
 	c.println("	// var ... uint64")
-	c.genFuncBody(code, resultCount)
+	c.genFuncBody(code, ft)
 	c.println("}")
 
 	s := c.sb.String()
@@ -138,13 +144,13 @@ func genUnusedSlotsCheat(s string, resultCount, stackMax int) string {
 	}
 
 	p := newPrinter()
-	p.print("\treturn")
-	p.printIf(resultCount > 0, " 0; ", "; ")
-	p.print("print(")
+	p.print("\tif false { print(")
 	for _, slot := range unusedSlots {
 		p.printf("s%d, ", slot)
 	}
-	p.println(") // 'xxx declared and not used' cheat")
+	p.print(") };")
+	p.printIf(resultCount > 0, " return 0", "")
+	p.println(" // 'xxx declared and not used' cheat")
 	return p.sb.String()
 }
 func isSlotUsed(s string, slotIdx int) bool {
@@ -164,10 +170,12 @@ func isSlotUsed(s string, slotIdx int) bool {
 	return false
 }
 
-func (c *internalFuncCompiler) genFuncBody(code binary.Code, resultCount int) {
+func (c *internalFuncCompiler) genFuncBody(
+	code binary.Code, ft binary.FuncType) {
+
 	expr := analyzeBr(code)
-	c.emitBlock(expr, false, resultCount > 0)
-	if resultCount > 0 {
+	c.emitBlock(binary.Call, ft, expr)
+	if len(ft.ResultTypes) > 0 {
 		//c.printf("\treturn s%d\n", c.stackPtr-1)
 		c.print("\treturn ")
 		for i := c.nResults - 1; i >= 0; i-- {
@@ -190,17 +198,17 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 	opname := instr.GetOpname()
 	switch instr.Opcode {
 	case binary.Unreachable:
-		c.printf(`panic("unreachable") // %s\n`, opname) // TODO
+		c.printf("panic(\"unreachable\") // %s\n", opname) // TODO
 	case binary.Nop:
 		c.printf("// %s\n", opname)
 	case binary.Block:
 		blockArgs := instr.Args.(binary.BlockArgs)
-		bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
-		c.emitBlock(blockArgs.Instrs, false, len(bt) > 0)
+		bt := c.moduleInfo.module.GetBlockType(blockArgs.BT)
+		c.emitBlock(binary.Block, bt, blockArgs.Instrs)
 	case binary.Loop:
 		blockArgs := instr.Args.(binary.BlockArgs)
-		bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
-		c.emitBlock(blockArgs.Instrs, true, len(bt) > 0)
+		bt := c.moduleInfo.module.GetBlockType(blockArgs.BT)
+		c.emitBlock(binary.Loop, bt, blockArgs.Instrs)
 	case binary.If:
 		c.emitIf(instr.Args.(binary.IfArgs))
 	case binary.Br:
@@ -377,7 +385,7 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 	case binary.I32RemS:
 		c.emitI32BinArithS("%", opname)
 	case binary.I32RemU:
-		c.emitI32BinArithU("/", opname)
+		c.emitI32BinArithU("%", opname)
 	case binary.I32And:
 		c.emitI32BinArithU("&", opname)
 	case binary.I32Or:
@@ -426,7 +434,7 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 	case binary.I64RemS:
 		c.emitI64BinArithS("%", opname)
 	case binary.I64RemU:
-		c.emitI64BinArithU("/", opname)
+		c.emitI64BinArithU("%", opname)
 	case binary.I64And:
 		c.emitI64BinArithU("&", opname)
 	case binary.I64Or:
@@ -450,7 +458,7 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 			c.stackPtr-2, c.stackPtr-2, c.stackPtr-1, opname)
 		c.stackPop()
 	case binary.I64Rotr:
-		c.printf("s%d = bits.RotateLeft64(s%d, int(s%d)) // %s\n",
+		c.printf("s%d = bits.RotateLeft64(s%d, -int(s%d)) // %s\n",
 			c.stackPtr-2, c.stackPtr-2, c.stackPtr-1, opname)
 		c.stackPop()
 	case binary.F32Abs:
@@ -592,9 +600,11 @@ l0: for {
 	break
 }
 */
-func (c *internalFuncCompiler) emitBlock(expr []binary.Instruction, isLoop, hasResult bool) {
+func (c *internalFuncCompiler) emitBlock(
+	opcode byte, bt binary.FuncType, expr []binary.Instruction) {
+
 	c.printIndents()
-	c.enterBlock(isLoop, hasResult)
+	c.enterBlock(opcode, bt)
 	if isBrTarget(expr) {
 		c.printf("%s: for {\n", c.getLabelName(c.blockDepth()-1))
 	} else {
@@ -622,8 +632,8 @@ l0: for {
 }
 */
 func (c *internalFuncCompiler) emitLoop(blockArgs binary.BlockArgs) {
-	bt := c.moduleInfo.module.GetResultTypes(blockArgs.BT)
-	c.emitBlock(blockArgs.Instrs, true, len(bt) > 0)
+	bt := c.moduleInfo.module.GetBlockType(blockArgs.BT)
+	c.emitBlock(binary.Loop, bt, blockArgs.Instrs)
 }
 
 /*
@@ -636,8 +646,8 @@ l0: for {
 }
 */
 func (c *internalFuncCompiler) emitIf(ifArgs binary.IfArgs) {
-	rt := c.moduleInfo.module.GetResultTypes(ifArgs.BT)
-	c.enterBlock(false, len(rt) > 0)
+	bt := c.moduleInfo.module.GetBlockType(ifArgs.BT)
+	c.enterBlock(binary.If, bt)
 	if isBrTarget(ifArgs.Instrs1) {
 		c.printIndentsPlus(-1)
 		c.printf("%s: for {\n", c.getLabelName(c.blockDepth()-1))
@@ -670,17 +680,32 @@ func (c *internalFuncCompiler) emitIf(ifArgs binary.IfArgs) {
 
 func (c *internalFuncCompiler) emitBr(labelIdx uint32) {
 	n := len(c.blocks) - int(labelIdx) - 1
-	c.printIf(c.blocks[n].isLoop, "continue ", "break ")
-	c.printf("%s // br %d\n", c.getLabelName(n), labelIdx)
+	targetBlock := c.blocks[n]
+	resultCnt := targetBlock.resultCnt
+	if targetBlock.opcode == binary.Loop {
+		resultCnt = targetBlock.paramCnt
+	}
+	for i := 0; i < resultCnt; i++ {
+		c.printf("s%d = s%d; ",
+			targetBlock.stackPtr+i, c.stackPtr-resultCnt+i)
+	}
+	c.printIf(targetBlock.opcode == binary.Loop, "continue", "break")
+	c.printf(" %s // br %d\n", c.getLabelName(n), labelIdx)
 }
 func (c *internalFuncCompiler) emitBrIf(labelIdx uint32) {
 	n := len(c.blocks) - int(labelIdx) - 1
-	br := "break"
-	if c.blocks[n].isLoop {
-		br = "continue"
+	targetBlock := c.blocks[n]
+	resultCnt := targetBlock.resultCnt
+	if targetBlock.opcode == binary.Loop {
+		resultCnt = targetBlock.paramCnt
 	}
-	c.printf("if s%d != 0 { %s %s } // br_if %d\n",
-		c.stackPtr-1, br, c.getLabelName(n), labelIdx)
+	c.printf("if s%d != 0 { ", c.stackPtr-1)
+	for i := 0; i < resultCnt; i++ {
+		c.printf("s%d = s%d; ",
+			targetBlock.stackPtr+i, c.stackPtr-resultCnt+i-1)
+	}
+	c.printIf(targetBlock.opcode == binary.Loop, "continue", "break")
+	c.printf(" %s } // br_if %d\n", c.getLabelName(n), labelIdx)
 	c.stackPop()
 }
 func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
@@ -697,11 +722,21 @@ func (c *internalFuncCompiler) emitBrTable(btArgs binary.BrTableArgs) {
 		}
 		c.printIndentsPlus(1)
 		n := len(c.blocks) - int(label) - 1
-		c.printIf(c.blocks[n].isLoop, "continue ", "break ")
+		targetBlock := c.blocks[n]
+		resultCnt := targetBlock.resultCnt
+		if targetBlock.opcode == binary.Loop {
+			resultCnt = targetBlock.paramCnt
+		}
+		for i := 0; i < resultCnt; i++ {
+			c.printf("s%d = s%d; ",
+				targetBlock.stackPtr+i, c.stackPtr-resultCnt+i-1)
+		}
+		c.printIf(c.blocks[n].opcode == binary.Loop, "continue ", "break ")
 		c.printf("%s //\n", c.getLabelName(n))
 	}
 	c.printIndents()
 	c.println("}")
+	c.stackPop()
 }
 func (c *internalFuncCompiler) emitReturn() {
 	//c.printf("return s%d // return\n", c.stackPtr-1)
