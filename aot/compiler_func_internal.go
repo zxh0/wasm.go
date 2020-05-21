@@ -65,7 +65,10 @@ func (c *internalFuncCompiler) enterBlock(opcode byte, bt binary.FuncType) {
 		opcode:    opcode,
 		paramCnt:  len(bt.ParamTypes),
 		resultCnt: len(bt.ResultTypes),
-		stackPtr:  c.stackPtr - len(bt.ParamTypes),
+		stackPtr:  c.stackPtr,
+	}
+	if opcode != binary.Call {
+		bi.stackPtr -= len(bt.ParamTypes)
 	}
 	if opcode == binary.If {
 		bi.stackPtr--
@@ -97,67 +100,57 @@ func (c *internalFuncCompiler) compile(idx int,
 	localCount := int(code.GetLocalCount())
 	c.nResults = resultCount
 
-	c.stackPtr = paramCount + localCount
-	c.stackMax = c.stackPtr
-
 	c.printf("func (m *aotModule) f%d(", idx)
 	c.genParams(paramCount)
 	c.print(")")
 	c.genResults(resultCount)
 	c.print(" {\n")
-	c.println("	// var ... uint64")
+	c.genLocals(paramCount, localCount)
+	c.println("\t// stack")
 	c.genFuncBody(code, ft)
 	c.println("}")
 
 	s := c.sb.String()
-	if c.stackMax > paramCount {
-		s = strings.ReplaceAll(s, "// var ... uint64",
-			genLocals(paramCount, localCount, c.stackMax))
+	if c.stackMax > 0 {
+		s = strings.ReplaceAll(s, "\t// stack", genStack(c.stackMax))
 	}
-	if cheat := genUnusedSlotsCheat(s, resultCount, c.stackMax); cheat != "" {
-		s = s[:len(s)-2] + cheat + "}\n"
+	if localCount > 0 || c.stackMax > 0 {
+		if cheat := genVarNotUsedCheat(s, paramCount, localCount, c.stackMax); cheat != "" {
+			s = strings.Replace(s, "// stack\n", "// stack\n"+cheat, 1)
+		}
 	}
 	return s
 }
 
-func genLocals(paramCount, localCount, stackMax int) string {
-	p := newPrinter()
-	p.print("var ")
-	for i := paramCount; i < stackMax; i++ {
-		p.printIf(i > paramCount, ", ", "")
-		p.printf("s%d", i)
-	}
-	p.printf(" uint64 // locals: %d", localCount)
-	return p.sb.String()
-}
-func genUnusedSlotsCheat(s string, resultCount, stackMax int) string {
-	s = s[strings.Index(s, "// locals:")+10:]
+func genVarNotUsedCheat(s string,
+	paramCount, localCount, stackMax int) string {
 
-	var unusedSlots []int
-	for i := 0; i < stackMax; i++ {
-		if !isSlotUsed(s, i) {
-			unusedSlots = append(unusedSlots, i)
+	s = s[strings.Index(s, "// stack")+8:]
+
+	unusedVars := make([]string, 0)
+	for i := 0; i < localCount; i++ {
+		v := fmt.Sprintf("a%d", paramCount+i)
+		if !isVarUsed(s, v) {
+			unusedVars = append(unusedVars, v)
 		}
 	}
-	if unusedSlots == nil {
-		return ""
+	for i := 0; i < stackMax; i++ {
+		v := fmt.Sprintf("s%d", i)
+		if !isVarUsed(s, v) {
+			unusedVars = append(unusedVars, v)
+		}
 	}
 
-	p := newPrinter()
-	p.print("\tif false { print(")
-	for _, slot := range unusedSlots {
-		p.printf("s%d, ", slot)
+	if len(unusedVars) == 0 {
+		return ""
 	}
-	p.print(") };")
-	p.printIf(resultCount > 0, " return 0", "")
-	p.println(" // 'xxx declared and not used' cheat")
-	return p.sb.String()
+	return "\tif false { print(" + strings.Join(unusedVars, ", ") +
+		") } // 'xxx declared and not used' cheat\n"
 }
-func isSlotUsed(s string, slotIdx int) bool {
-	slotName := fmt.Sprintf("s%d", slotIdx)
-	assign := slotName + " = "
+func isVarUsed(s, v string) bool {
+	assign := v + " = "
 	for len(s) > 0 {
-		idx := strings.Index(s, slotName)
+		idx := strings.Index(s, v)
 		if idx < 0 {
 			return false
 		}
@@ -168,6 +161,30 @@ func isSlotUsed(s string, slotIdx int) bool {
 		s = s[len(assign):]
 	}
 	return false
+}
+
+func genStack(stackMax int) string {
+	p := newPrinter()
+	p.print("\tvar ")
+	for i := 0; i < stackMax; i++ {
+		p.printIf(i > 0, ", ", "")
+		p.printf("s%d", i)
+	}
+	p.println(" uint64 // stack")
+	return p.String()
+}
+
+func (c *internalFuncCompiler) genLocals(paramCount, localCount int) {
+	if localCount > 0 {
+		c.print("\tvar ")
+		for i := 0; i < localCount; i++ {
+			c.printIf(i > 0, ", ", "")
+			c.printf("a%d", paramCount+i)
+		}
+		c.println(" uint64 // locals")
+	} else {
+		c.println("\t// no locals")
+	}
 }
 
 func (c *internalFuncCompiler) genFuncBody(
@@ -231,14 +248,14 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 			c.stackPtr-1, c.stackPtr-3, c.stackPtr-2, opname)
 		c.stackPtr -= 2
 	case binary.LocalGet:
-		c.printf("s%d = s%d // %s %d\n",
+		c.printf("s%d = a%d // %s %d\n",
 			c.stackPush(), instr.Args, opname, instr.Args)
 	case binary.LocalSet:
-		c.printf("s%d = s%d // %s %d\n",
+		c.printf("a%d = s%d // %s %d\n",
 			instr.Args, c.stackPtr-1, opname, instr.Args)
 		c.stackPtr--
 	case binary.LocalTee:
-		c.printf("s%d = s%d // %s %d\n",
+		c.printf("a%d = s%d // %s %d\n",
 			instr.Args, c.stackPtr-1, opname, instr.Args)
 	case binary.GlobalGet:
 		c.printf("s%d = m.globals[%d].GetAsU64() // %s %d\n",
