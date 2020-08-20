@@ -605,6 +605,21 @@ func (c *internalFuncCompiler) emitInstr(instr binary.Instruction) {
 		c.printf("// %s\n", opname) // TODO
 	case binary.F64ReinterpretI64:
 		c.printf("// %s\n", opname) // TODO
+	case binary.I32Extend8S:
+		c.printf("s%d = uint64(int32(int8(s%d))) // %s\n",
+			c.stackPtr-1, c.stackPtr-1, opname)
+	case binary.I32Extend16S:
+		c.printf("s%d = uint64(int32(int16(s%d))) // %s\n",
+			c.stackPtr-1, c.stackPtr-1, opname)
+	case binary.I64Extend8S:
+		c.printf("s%d = uint64(int64(int8(s%d))) // %s\n",
+			c.stackPtr-1, c.stackPtr-1, opname)
+	case binary.I64Extend16S:
+		c.printf("s%d = uint64(int64(int16(s%d))) // %s\n",
+			c.stackPtr-1, c.stackPtr-1, opname)
+	case binary.I64Extend32S:
+		c.printf("s%d = uint64(int64(int32(s%d))) // %s\n",
+			c.stackPtr-1, c.stackPtr-1, opname)
 	case 0xFF:
 	default:
 		c.printf("// 0x%X ???\n", instr.Opcode)
