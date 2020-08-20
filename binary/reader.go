@@ -234,7 +234,7 @@ func (reader *wasmReader) readImportDesc() ImportDesc {
 	case ImportTagGlobal:
 		desc.Global = reader.readGlobalType()
 	default:
-		panic(fmt.Errorf("invalid import desc tag: %d", desc.Tag))
+		panic(fmt.Errorf("malformed import kind: %d", desc.Tag))
 	}
 	return desc
 }
@@ -294,7 +294,7 @@ func (reader *wasmReader) readExportDesc() ExportDesc {
 	case ExportTagMem: // mem_idx
 	case ExportTagGlobal: // global_idx
 	default:
-		panic(fmt.Errorf("invalid export desc tag: %d", desc.Tag))
+		panic(fmt.Errorf("malformed export kind: %d", desc.Tag))
 	}
 	return desc
 }
@@ -442,14 +442,22 @@ func (reader *wasmReader) readGlobalType() GlobalType {
 	return gt
 }
 func (reader *wasmReader) readLimits() Limits {
-	limits := Limits{
-		Tag: reader.readByte(),
-		Min: reader.readVarU32(),
+	tag := reader.readByte()
+	if tag > 0x80 {
+		// TODO: this is added to pass spec/test/core/binary.wasm
+		panic(errors.New("integer representation too long"))
 	}
-	if limits.Tag == 1 {
-		limits.Max = reader.readVarU32()
+	if tag > 1 {
+		panic(errors.New("integer too large"))
 	}
-	return limits
+
+	min := reader.readVarU32()
+	max := uint32(0)
+	if tag == 1 {
+		max = reader.readVarU32()
+	}
+
+	return Limits{tag, min, max}
 }
 
 // indices
@@ -520,7 +528,9 @@ func (reader *wasmReader) readArgs(opcode byte) interface{} {
 	case F64Const:
 		return reader.readF64()
 	case TruncSat:
-		return reader.readByte()
+		// The saturating truncation instructions all have a one byte prefix,
+		// whereas the actual opcode is encoded by a variable-length unsigned integer.
+		return uint8(reader.readVarU32())
 	default:
 		if opcode >= I32Load && opcode <= I64Store32 {
 			return reader.readMemArg()
